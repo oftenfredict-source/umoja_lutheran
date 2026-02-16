@@ -58,7 +58,7 @@
     <div class="tile">
       <div class="tile-title-w-btn">
         <h3 class="title">Pending Guest Orders</h3>
-        {{-- <button class="btn btn-primary" onclick="openWalkInModal()"><i class="fa fa-plus"></i> New Walk-in Sale</button> --}}
+        <button class="btn btn-primary" onclick="openWalkInModal()"><i class="fa fa-plus"></i> New Walk-in Sale</button>
       </div>
       
       @if($pendingOrders->count() > 0)
@@ -358,9 +358,9 @@
                                         ->sum('total_price_tsh');
                                 @endphp
                                 <div class="btn-group">
-                                    {{-- <button class="btn btn-primary btn-sm rounded-pill px-3" onclick="openWalkInModal(null, '{{ $ceremony->guest_name }}', {{ $ceremony->id }})">
+                                    <button class="btn btn-primary btn-sm rounded-pill px-3" onclick="openWalkInModal(null, '{{ $ceremony->guest_name }}', {{ $ceremony->id }})">
                                         <i class="fa fa-plus-circle mr-1"></i> Add Usage
-                                    </button> --}}
+                                    </button>
                                     <a href="{{ route('bar-keeper.day-services.docket', $ceremony->id) }}" target="_blank" class="btn btn-secondary btn-sm rounded-pill px-3 ml-2" title="Print Docket">
                                         <i class="fa fa-print mr-1"></i> Print Docket
                                     </a>
@@ -392,12 +392,12 @@
         <div class="tile shadow-sm h-100">
             <h3 class="tile-title">Quick Operational Actions</h3>
             <div class="row">
-                {{-- <div class="col-md-3 mb-3">
+                <div class="col-md-3 mb-3">
                     <button onclick="openWalkInModal()" class="btn btn-primary btn-block p-4 shadow-sm h-100 d-flex flex-column align-items-center justify-content-center">
                         <i class="fa fa-glass fa-2x mb-2"></i>
                         <span>New Walk-in Sale</span>
                     </button>
-                </div> --}}
+                </div>
                 <div class="col-md-3 mb-3">
                     <a href="{{ route('bar-keeper.stock.index') }}" class="btn btn-info btn-block p-4 shadow-sm h-100 d-flex flex-column align-items-center justify-content-center">
                         <i class="fa fa-cubes fa-2x mb-2"></i>

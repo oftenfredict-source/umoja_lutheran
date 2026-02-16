@@ -54,6 +54,6 @@ We appreciate your patience as we work to resolve this issue.
 If you have any questions or concerns, please contact reception.
 
 Best regards,  
-PrimeLand Hotel Team
+Umoja Lutheran Hostel Team
 </x-mail::message>
 

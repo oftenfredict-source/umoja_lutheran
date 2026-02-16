@@ -4,8 +4,8 @@
         <!-- Required meta tags -->
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-        <link rel="icon" href="{{ asset('royal-master/image/logo/Logo.png') }}" type="image/png">
-        <title>Blog - PrimeLand Hotel</title>
+        
+        <title>Blog - Umoja Lutheran Hostel</title>
         <!-- Bootstrap CSS -->
         <link rel="stylesheet" href="{{ asset('royal-master/css/bootstrap.css') }}">
         <link rel="stylesheet" href="{{ asset('royal-master/vendors/linericon/style.css') }}">
@@ -635,8 +635,8 @@
                             
                             <!-- Author Widget -->
                             <aside class="single_sidebar_widget author_widget" style="background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); margin-bottom: 30px; text-align: center;">
-                                <img class="author_img rounded-circle" src="{{ asset('royal-master/image/logo/Logo.png') }}" alt="PrimeLand Hotel" style="width: 120px; height: 120px; object-fit: contain; margin-bottom: 20px; border: 3px solid #e77a3a; padding: 10px;">
-                                <h4 style="color: #222; font-size: 22px; font-weight: 700; margin-bottom: 10px;">PrimeLand Hotel</h4>
+                                <div style="width: 120px; height: 120px; display: flex; align-items: center; justify-content: center; background: #940000; border-radius: 50%; color: white; font-size: 60px; font-weight: bold; margin: 0 auto 20px;">U</div>
+                                <h4 style="color: #222; font-size: 22px; font-weight: 700; margin-bottom: 10px;">Umoja Lutheran Hostel</h4>
                                 <p style="color: #e77a3a; font-size: 14px; font-weight: 600; margin-bottom: 20px;">Your Premier Hospitality Destination</p>
                                 <div class="social_icon" style="display: flex; justify-content: center; gap: 10px; margin-bottom: 20px;">
                                     <a href="#" style="display: inline-block; width: 40px; height: 40px; line-height: 40px; text-align: center; border-radius: 50%; background: #f0f0f0; color: #e77a3a; transition: all 0.3s ease;"><i class="fa fa-facebook"></i></a>
@@ -644,7 +644,7 @@
                                     <a href="#" style="display: inline-block; width: 40px; height: 40px; line-height: 40px; text-align: center; border-radius: 50%; background: #f0f0f0; color: #e77a3a; transition: all 0.3s ease;"><i class="fa fa-instagram"></i></a>
                                     <a href="#" style="display: inline-block; width: 40px; height: 40px; line-height: 40px; text-align: center; border-radius: 50%; background: #f0f0f0; color: #e77a3a; transition: all 0.3s ease;"><i class="fa fa-linkedin"></i></a>
                                 </div>
-                                <p style="color: #666; line-height: 1.7; font-size: 14px; margin: 0;">Welcome to PrimeLand Hotel's blog! Stay updated with our latest news, travel tips, local insights, and exclusive offers.</p>
+                                <p style="color: #666; line-height: 1.7; font-size: 14px; margin: 0;">Welcome to Umoja Lutheran Hostel's blog! Stay updated with our latest news, travel tips, local insights, and exclusive offers.</p>
                             </aside>
                             
                             <!-- Latest Posts Widget -->
@@ -710,3 +710,4 @@
         </script>
     </body>
 </html>
+

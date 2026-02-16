@@ -4,8 +4,8 @@
         <!-- Required meta tags -->
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-        <link rel="icon" href="{{ asset('royal-master/image/logo/Logo.png') }}" type="image/png">
-        <title>Accommodation - PrimeLand Hotel</title>
+        
+        <title>Accommodation - Umoja Lutheran Hostel</title>
         <!-- Bootstrap CSS -->
         <link rel="stylesheet" href="{{ asset('royal-master/css/bootstrap.css') }}">
         <link rel="stylesheet" href="{{ asset('royal-master/vendors/linericon/style.css') }}">
@@ -559,5 +559,6 @@
         @include('landing_page_views.partials.chat-widgets')
     </body>
 </html>
+
 
 

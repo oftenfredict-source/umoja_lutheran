@@ -4,7 +4,7 @@
 Hello {{ $booking->guest_name }},
 
 @if($daysUntil == 0)
-**Your check-in is today!** We're excited to welcome you to PrimeLand Hotel.
+**Your check-in is today!** We're excited to welcome you to Umoja Lutheran Hostel.
 @else
 Your check-in is in **{{ $daysUntil }} day(s)**. We're looking forward to your arrival!
 @endif
@@ -36,6 +36,6 @@ Online Check-In Now
 We can't wait to welcome you!
 
 Best regards,  
-PrimeLand Hotel Team
+Umoja Lutheran Hostel Team
 </x-mail::message>
 

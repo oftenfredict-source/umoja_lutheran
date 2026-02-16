@@ -59,7 +59,7 @@ View Check-In Page
 **Note:** Please ensure the room is ready and prepare for guest arrival.
 
 Best regards,  
-PrimeLand Hotel Team
+Umoja Lutheran Hostel Team
 </x-mail::message>
 
 

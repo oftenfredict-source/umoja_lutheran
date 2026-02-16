@@ -8,7 +8,7 @@
             <div class="col-lg-3 col-md-6 col-sm-6">
                 <div class="single-footer-widget footer-logo-section">
                     <div class="footer-logo">
-                        <img src="{{ asset('royal-master/image/logo/Logo.png') }}" alt="{{ config('app.name') }} Logo">
+                        @include('landing_page_views.partials.umoja-logo')
                     </div>
                     <p style="color: rgba(255,255,255,0.9); line-height: 1.8; margin-top: 15px;">Experience luxury and comfort at {{ config('app.name') }}. Your perfect stay awaits in the heart of Kilimanjaro.</p>
                 </div>
@@ -124,7 +124,7 @@
                     <h6 class="footer_title">Follow Us</h6>
                     <p style="color: rgba(255,255,255,0.8); margin-bottom: 20px;">Connect with us on social media</p>
                     <div class="footer-social-icons">
-                        <a href="https://www.instagram.com/primeland_hotel?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" class="social-media-icon" target="_blank" title="Instagram" style="color: #E1306C; font-size: 36px; margin-right: 25px;">
+                        <a href="#" class="social-media-icon" target="_blank" title="Instagram" style="color: #E1306C; font-size: 36px; margin-right: 25px;">
                             <i class="fa fa-instagram"></i>
                         </a>
                         <a href="#" class="social-media-icon" target="_blank" title="Facebook" style="color: #1877F2; font-size: 36px; margin-right: 25px;">
@@ -169,5 +169,6 @@
         }
     }
 </style>
+
 
 

@@ -251,13 +251,13 @@
     }
 </style>
 <div class="transfer-note-header d-print-block" style="display: none;">
-    <h2>PRIMELAND HOTEL</h2>
+    <h2>UMOJA LUTHERAN HOSTEL</h2>
     <p><strong>TRANSFER NOTE</strong></p>
     <p>Date: {{ date('d M Y') }} | Ref: SL-{{ $shoppingList->id }}</p>
     <p>Shopping List: {{ $shoppingList->name }}</p>
 </div>
 <div class="transfer-note-footer d-print-block" style="display: none;">
-    <p>Generated on {{ date('d M Y H:i') }} | PrimeLand Hotel - Kitchen Management System</p>
+    <p>Generated on {{ date('d M Y H:i') }} | Umoja Lutheran Hostel - Kitchen Management System</p>
     <p>Powered By EmCa Technologies</p>
 </div>
 @endsection

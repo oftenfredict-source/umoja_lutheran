@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shopping List - {{ $shoppingList->name }} - PrimeLand Hotel</title>
+    <title>Shopping List - {{ $shoppingList->name }} - Umoja Lutheran Hostel</title>
     <style>
         @media print {
             @page { margin: 0 !important; size: A4; }
@@ -35,7 +35,7 @@
             transform: translate(-50%, -50%) rotate(-45deg);
             width: 500px;
             height: 500px;
-            background-image: url('{{ url('royal-master/image/logo/Logo.png') }}');
+            background-image: none;
             background-repeat: no-repeat;
             background-position: center;
             background-size: contain;
@@ -55,12 +55,12 @@
         }
         .header {
             text-align: center;
-            border-bottom: 3px solid #e07632;
+            border-bottom: 3px solid #940000;
             padding-bottom: 20px;
             margin-bottom: 30px;
         }
         .header .logo-container img { max-height: 80px; max-width: 300px; height: auto; width: auto; }
-        .header h1 { color: #e07632; font-size: 28px; margin-bottom: 5px; font-weight: bold; }
+        .header h1 { color: #940000; font-size: 28px; margin-bottom: 5px; font-weight: bold; }
         .receipt-title {
             text-align: center;
             font-size: 18px;
@@ -71,9 +71,9 @@
         }
         .info-section { margin-bottom: 25px; }
         .info-section h3 {
-            color: #e07632;
+            color: #940000;
             font-size: 14px;
-            border-bottom: 2px solid #e07632;
+            border-bottom: 2px solid #940000;
             padding-bottom: 8px;
             margin-bottom: 15px;
             font-weight: bold;
@@ -99,7 +99,7 @@
         
         .print-button { text-align: center; margin: 15px 0; }
         .print-button button {
-            background-color: #e07632;
+            background-color: #940000;
             color: #fff;
             border: none;
             padding: 12px 30px;
@@ -108,7 +108,7 @@
             border-radius: 4px;
             font-weight: bold;
         }
-        .print-button button:hover { background-color: #c86528; }
+        .print-button button:hover { background-color: #7b0000; }
         .checkbox-cell { text-align: center; width: 50px; }
         .checkbox-box {
             display: inline-block;
@@ -143,8 +143,8 @@
     <div class="receipt-container">
         <!-- Header -->
         <div class="header">
-            <div class="logo-container">
-                <img src="{{ url('royal-master/image/logo/Logo.png') }}" alt="PrimeLand Hotel Logo" onerror="this.style.display='none';">
+            <div class="logo-text-brand" style="margin-bottom: 10px; display: inline-block;">
+                <div style="background: #940000; color: white; width: 40px; height: 40px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold;">U</div>
             </div>
             @php
                 $uniqueDepts = $shoppingList->items->map(function($item) {
@@ -153,7 +153,7 @@
                 
                 $deptTitle = $uniqueDepts->isNotEmpty() ? '(' . $uniqueDepts->join(', ', ' & ') . ')' : '';
             @endphp
-            <h1>PRIMELAND HOTEL - SHOPPING LIST <span style="font-size: 0.8em; font-weight: normal;">{{ $deptTitle }}</span></h1>
+            <h1>UMOJA LUTHERAN HOSTEL - SHOPPING LIST <span style="font-size: 0.8em; font-weight: normal;">{{ $deptTitle }}</span></h1>
             <p style="margin-top: 5px; font-size: 11px;">Ref: SL-{{ $shoppingList->id }} | Date: {{ $shoppingList->created_at->format('d M Y') }}</p>
 
             @php
@@ -253,8 +253,8 @@
                     
                     @foreach($sortedCategories as $categoryKey)
                         @php $items = $itemsByCategory[$categoryKey]; @endphp
-                        <tr style="background-color: #e0763210;">
-                            <td colspan="{{ $shoppingList->status === 'completed' ? '7' : '6' }}" style="font-weight: bold; color: #e07632; py-1;">
+                        <tr style="background-color: #94000010;">
+                            <td colspan="{{ $shoppingList->status === 'completed' ? '7' : '6' }}" style="font-weight: bold; color: #940000; py-1;">
                                 {{ $items->first()['category_name'] }}
                             </td>
                         </tr>
@@ -293,9 +293,9 @@
                         <td colspan="5" style="text-align: right; padding: 15px;">TOTAL ESTIMATED COST:</td>
                         @if($shoppingList->status === 'completed')
                             <td style="text-align: right; padding: 15px;">{{ number_format($grandTotal) }}</td>
-                            <td style="text-align: right; padding: 15px; font-size: 14px; color: #e07632;">{{ number_format($actualTotal) }} TZS</td>
+                            <td style="text-align: right; padding: 15px; font-size: 14px; color: #940000;">{{ number_format($actualTotal) }} TZS</td>
                         @else
-                            <td style="text-align: right; padding: 15px; font-size: 14px; color: #e07632;">{{ number_format($grandTotal) }}</td>
+                            <td style="text-align: right; padding: 15px; font-size: 14px; color: #940000;">{{ number_format($grandTotal) }}</td>
                         @endif
                     </tr>
                 </tfoot>

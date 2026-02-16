@@ -1,9 +1,9 @@
 <x-mail::message>
-# Welcome to PrimeLand Hotel
+# Welcome to Umoja Lutheran Hostel
 
 Hello {{ $user->name }},
 
-Welcome to PrimeLand Hotel! We're thrilled to have you as our guest.
+Welcome to Umoja Lutheran Hostel! We're thrilled to have you as our guest.
 
 Your guest account has been successfully created. You can now access your dashboard to manage your bookings and stay connected with us.
 
@@ -36,6 +36,6 @@ If you have any questions or need assistance, please don't hesitate to contact u
 We look forward to welcoming you!
 
 Best regards,  
-PrimeLand Hotel Team
+Umoja Lutheran Hostel Team
 </x-mail::message>
 

@@ -4,8 +4,8 @@
         <!-- Required meta tags -->
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-        <link rel="icon" href="{{ asset('royal-master/image/logo/Logo.png') }}" type="image/png">
-        <title>Services - PrimeLand Hotel</title>
+        
+        <title>Services - Umoja Lutheran Hostel</title>
         <!-- Bootstrap CSS -->
         <link rel="stylesheet" href="{{ asset('royal-master/css/bootstrap.css') }}">
         <link rel="stylesheet" href="{{ asset('royal-master/vendors/linericon/style.css') }}">
@@ -376,7 +376,7 @@
             <div class="container" style="position: relative; z-index: 1;">
                 <div class="page-cover text-center">
                     <h2 class="page-cover-tittle" style="color: #e77a3a;">Our Services</h2>
-                    <p style="color: white; font-size: 16px; margin-top: 15px; margin-bottom: 20px;">Experience comfort and convenience at PrimeLand Hotel</p>
+                    <p style="color: white; font-size: 16px; margin-top: 15px; margin-bottom: 20px;">Experience comfort and convenience at Umoja Lutheran Hostel</p>
                     <ol class="breadcrumb">
                         <li><a href="{{ url('/') }}">Home</a></li>
                         <li class="active">Services</li>
@@ -391,7 +391,7 @@
             <div class="container">
                 <div class="section_title text-center" style="margin-bottom: 60px;">
                     <h2 class="title_color" style="color: #e77a3a; font-size: 36px; margin-bottom: 15px;">Our Premium Services</h2>
-                    <p style="font-size: 16px; color: #777;">Experience the best of PrimeLand Hotel with our exceptional amenities</p>
+                    <p style="font-size: 16px; color: #777;">Experience the best of Umoja Lutheran Hostel with our exceptional amenities</p>
                 </div>
                 <div class="row">
                     <!-- Hotel Accommodation Service -->
@@ -676,3 +676,4 @@
         <!-- Loading spinner JavaScript removed -->
     </body>
 </html>
+

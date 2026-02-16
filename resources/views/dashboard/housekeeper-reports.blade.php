@@ -98,7 +98,7 @@
     transform: translate(-50%, -50%) rotate(-45deg);
     width: 500px;
     height: 500px;
-    background-image: url('{{ asset('royal-master/image/logo/Logo.png') }}');
+    background-image: none !important;
     background-repeat: no-repeat;
     background-position: center;
     background-size: contain;
@@ -343,9 +343,9 @@
     <!-- Header -->
     <div class="receipt-report-header">
         <div class="logo-container">
-            <img src="{{ asset('royal-master/image/logo/Logo.png') }}" alt="Umoj Lutheran Hostel Logo" onerror="this.style.display='none';">
+            <div class="logo-text-brand" style="margin-bottom: 10px; display: inline-block;"><div style="background: #940000; color: white; width: 40px; height: 40px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold;">U</div></div>
         </div>
-        <h1>Umoj Lutheran Hostel</h1>
+        <h1>Umoja Lutheran Hostel</h1>
         <div style="margin-top: 10px; margin-bottom: 10px; line-height: 1.8;">
             <p style="margin: 5px 0; font-size: 13px; color: #555;">
                 <strong>Location:</strong> Sokoine Road-Moshi Kilimanjaro-Tanzania
@@ -619,8 +619,8 @@
     
     <!-- Footer -->
     <div class="receipt-footer">
-        <p><strong>Umoj Lutheran Hostel</strong></p>
-        <p>This report has been generated automatically by the Umoj Lutheran Hostel Management System.</p>
+        <p><strong>Umoja Lutheran Hostel</strong></p>
+        <p>This report has been generated automatically by the Umoja Lutheran Hostel Management System.</p>
         <p style="margin-top: 15px;">This is an official report. Please keep this for your records.</p>
         <p style="margin-top: 10px; font-size: 9px;">Generated on: {{ now()->format('F d, Y \a\t g:i A') }}</p>
         <p class="powered-by">Powered By <strong>EmCa Techonologies</strong></p>
@@ -646,3 +646,4 @@ function printReport() {
 }
 </script>
 @endsection
+

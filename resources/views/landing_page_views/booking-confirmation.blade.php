@@ -4,8 +4,8 @@
         <!-- Required meta tags -->
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-        <link rel="icon" href="{{ asset('royal-master/image/logo/Logo.png') }}" type="image/png">
-        <title>Booking Confirmation - PrimeLand Hotel</title>
+        
+        <title>Booking Confirmation - Umoja Lutheran Hostel</title>
         <!-- Bootstrap CSS -->
         <link rel="stylesheet" href="{{ asset('royal-master/css/bootstrap.css') }}">
         <link rel="stylesheet" href="{{ asset('royal-master/vendors/linericon/style.css') }}">
@@ -337,7 +337,7 @@
                 </h1>
                 <p class="success-subtitle">
                     @if($booking->payment_status == 'paid')
-                        Thank you for choosing PrimeLand Hotel. We're excited to host you!
+                        Thank you for choosing Umoja Lutheran Hostel. We're excited to host you!
                     @else
                         Please complete your payment to confirm your booking. Your booking will expire if payment is not completed.
                     @endif
@@ -493,3 +493,4 @@
 </body>
 
 </html>
+

@@ -3,7 +3,7 @@
 
 Hello {{ $guiderName }},
 
-Your corporate booking for **{{ $company->name }}** has been successfully created at PrimeLand Hotel.
+Your corporate booking for **{{ $company->name }}** has been successfully created at Umoja Lutheran Hostel.
 
 ## Booking Summary
 
@@ -60,8 +60,8 @@ All cancellations must be received with written confirmation.
 
 If you have any questions, please contact us at your earliest convenience.
 
-Thank you for choosing PrimeLand Hotel!
+Thank you for choosing Umoja Lutheran Hostel!
 
 Best regards,  
-PrimeLand Hotel Team
+Umoja Lutheran Hostel Team
 </x-mail::message>

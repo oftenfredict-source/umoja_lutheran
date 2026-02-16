@@ -4,8 +4,8 @@
         <!-- Required meta tags -->
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-        <link rel="icon" href="{{ asset('royal-master/image/logo/Logo.png') }}" type="image/png">
-        <title>Contact Us - PrimeLand Hotel</title>
+        
+        <title>Contact Us - Umoja Lutheran Hostel</title>
         <!-- Bootstrap CSS -->
         <link rel="stylesheet" href="{{ asset('royal-master/css/bootstrap.css') }}">
         <link rel="stylesheet" href="{{ asset('royal-master/vendors/linericon/style.css') }}">
@@ -391,7 +391,7 @@
                                 Email
                             </h4>
                             <p style="color: #666; line-height: 1.8; margin: 0; padding-left: 28px;">
-                                <a href="mailto:info@primelandhotel.co.tz" style="color: #666; text-decoration: none; transition: color 0.3s;">info@primelandhotel.co.tz</a><br>
+                                <a href="mailto:info@umojahostel.com" style="color: #666; text-decoration: none; transition: color 0.3s;">info@umojahostel.com</a><br>
                                 <a href="mailto:infoprimelandhotel@gmail.com" style="color: #666; text-decoration: none; transition: color 0.3s;">infoprimelandhotel@gmail.com</a>
                             </p>
                         </div>
@@ -709,5 +709,6 @@
         @include('landing_page_views.partials.chat-widgets')
     </body>
 </html>
+
 
 

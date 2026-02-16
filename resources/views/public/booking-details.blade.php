@@ -293,7 +293,7 @@
         </div>
         
         <div class="footer">
-            <p><strong>PrimeLand Hotel</strong> | Official Booking Details</p>
+            <p><strong>Umoja Lutheran Hostel</strong> | Official Booking Details</p>
             <p style="margin-top: 5px; font-size: 12px;">This is an official booking confirmation. Please keep this information secure.</p>
         </div>
     </div>

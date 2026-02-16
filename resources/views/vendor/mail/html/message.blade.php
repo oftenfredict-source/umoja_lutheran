@@ -2,7 +2,7 @@
 {{-- Header --}}
 <x-slot:header>
 <x-mail::header :url="config('app.url')">
-PrimeLand Hotel
+Umoja Lutheran Hostel
 </x-mail::header>
 </x-slot:header>
 

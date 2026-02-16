@@ -3,7 +3,7 @@
 
 Hello {{ $dayService->guest_name }},
 
-Thank you for choosing PrimeLand Hotel for your swimming pool access! We are pleased to confirm your booking.
+Thank you for choosing Umoja Lutheran Hostel for your swimming pool access! We are pleased to confirm your booking.
 
 ## Service Details
 
@@ -69,7 +69,7 @@ Thank you for choosing PrimeLand Hotel for your swimming pool access! We are ple
 If you have any questions or need to make changes, please contact us.
 
 Best regards,  
-PrimeLand Hotel Team
+Umoja Lutheran Hostel Team
 </x-mail::message>
 
 

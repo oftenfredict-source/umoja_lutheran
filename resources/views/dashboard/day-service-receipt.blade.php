@@ -223,7 +223,7 @@
     <div class="receipt-container">
         <div class="header">
             {{-- <div class="logo-container">
-                <img src="{{ asset('royal-master/image/logo/Logo.png') }}" alt="Umoja Lutheran Hostel Logo">
+                <div class="logo-text-brand" style="margin-bottom: 10px; display: inline-block;"><div style="background: #940000; color: white; width: 40px; height: 40px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold;">U</div></div>
             </div> --}}
             <h1>Umoja Lutheran Hostel</h1>
             <p>Sokoine Road - Moshi Kilimanjaro - Tanzania</p>
@@ -547,4 +547,5 @@
     </script>
 </body>
 </html>
+
 

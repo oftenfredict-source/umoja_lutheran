@@ -4,14 +4,14 @@
 
 Hello {{ $booking->guest_name }},
 
-**Your booking at PrimeLand Hotel will expire in 15 minutes!** Please complete your payment immediately to secure your reservation.
+**Your booking at Umoja Lutheran Hostel will expire in 15 minutes!** Please complete your payment immediately to secure your reservation.
 
 @elseif($warningType === 'hour')
 # Payment Reminder - Urgent
 
 Hello {{ $booking->guest_name }},
 
-**Your booking at PrimeLand Hotel will expire in 1 hour!** Please complete your payment as soon as possible to secure your reservation.
+**Your booking at Umoja Lutheran Hostel will expire in 1 hour!** Please complete your payment as soon as possible to secure your reservation.
 
 @elseif($reminderType)
 # Payment Reminder
@@ -63,7 +63,7 @@ Pay Now via PayPal
 If you have any questions or need assistance with payment, please contact us immediately.
 
 Best regards,  
-PrimeLand Hotel Team
+Umoja Lutheran Hostel Team
 </x-mail::message>
 
 

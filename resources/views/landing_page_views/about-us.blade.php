@@ -4,8 +4,8 @@
         <!-- Required meta tags -->
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-        <link rel="icon" href="{{ asset('royal-master/image/logo/Logo.png') }}" type="image/png">
-        <title>About Us - PrimeLand Hotel</title>
+        
+        <title>About Us - Umoja Lutheran Hostel</title>
         <!-- Bootstrap CSS -->
         <link rel="stylesheet" href="{{ asset('royal-master/css/bootstrap.css') }}">
         <link rel="stylesheet" href="{{ asset('royal-master/vendors/linericon/style.css') }}">
@@ -260,7 +260,7 @@
                         About Us
                         <span style="position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 60px; height: 3px; background: #e77a3a; border-radius: 2px;"></span>
                     </h2>
-                    <p style="font-size: 16px; color: #777; margin-top: 20px;">Welcome to Primeland Hotel, Comfort in every stay</p>
+                    <p style="font-size: 16px; color: #777; margin-top: 20px;">Welcome to Umoja Lutheran Hostel, Comfort in every stay</p>
                 </div>
                 
                 <!-- Main Content with Image -->
@@ -268,7 +268,7 @@
                     <div class="col-lg-6 mb-4 mb-lg-0">
                         <div style="border-radius: 15px; overflow: hidden; box-shadow: 0 8px 30px rgba(0,0,0,0.12); position: relative;">
                             <div style="position: absolute; top: 20px; left: 20px; background: #e77a3a; color: #fff; padding: 8px 20px; border-radius: 25px; font-size: 13px; font-weight: 600; z-index: 2;">Premium Accommodation</div>
-                            <img class="img-fluid" src="{{ asset('hotel_gallery/room_.jpg') }}" alt="PrimeLand Hotel" style="width: 100%; height: 450px; object-fit: cover;">
+                            <img class="img-fluid" src="{{ asset('hotel_gallery/room_.jpg') }}" alt="Umoja Lutheran Hostel" style="width: 100%; height: 450px; object-fit: cover;">
                         </div>
                     </div>
                     <div class="col-lg-6">
@@ -309,7 +309,7 @@
                     <div class="col-lg-6 order-lg-2 mb-4 mb-lg-0">
                         <div style="border-radius: 15px; overflow: hidden; box-shadow: 0 8px 30px rgba(0,0,0,0.12); position: relative;">
                             <div style="position: absolute; top: 20px; right: 20px; background: #e77a3a; color: #fff; padding: 8px 20px; border-radius: 25px; font-size: 13px; font-weight: 600; z-index: 2;">Premium Services</div>
-                            <img class="img-fluid" src="{{ asset('hotel_gallery/swimming floating tray_.jpg') }}" alt="PrimeLand Hotel Services" style="width: 100%; height: 450px; object-fit: cover;">
+                            <img class="img-fluid" src="{{ asset('hotel_gallery/swimming floating tray_.jpg') }}" alt="Umoja Lutheran Hostel Services" style="width: 100%; height: 450px; object-fit: cover;">
                         </div>
                     </div>
                     <div class="col-lg-6 order-lg-1">
@@ -718,3 +718,4 @@
         @include('landing_page_views.partials.chat-widgets')
     </body>
 </html>
+

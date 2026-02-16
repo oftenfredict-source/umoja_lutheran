@@ -89,7 +89,7 @@
     transform: translate(-50%, -50%) rotate(-45deg);
     width: 600px;
     height: 600px;
-    background-image: url('{{ asset('dashboard_assets/images/Logo.png') }}');
+    background-image: none;
     background-repeat: no-repeat;
     background-position: center;
     background-size: contain;
@@ -106,7 +106,7 @@
 
 .receipt-report-header {
     text-align: center;
-    border-bottom: 3px solid #e07632;
+    border-bottom: 3px solid #940000;
     padding-bottom: 20px;
     margin-bottom: 30px;
 }
@@ -120,7 +120,7 @@
 }
 
 .receipt-report-header h1 {
-    color: #e07632;
+    color: #940000;
     font-size: 32px;
     margin-bottom: 5px;
     font-weight: 900;
@@ -156,7 +156,7 @@
 }
 
 .print-button-section button {
-    background-color: #e07632;
+    background-color: #940000;
     color: #fff;
     border: none;
     padding: 12px 40px;
@@ -178,9 +178,9 @@
 }
 
 .receipt-info-section h3 {
-    color: #e07632;
+    color: #940000;
     font-size: 15px;
-    border-bottom: 2px solid #e07632;
+    border-bottom: 2px solid #940000;
     padding-bottom: 8px;
     margin-bottom: 15px;
     font-weight: bold;
@@ -370,15 +370,15 @@
     <!-- Header -->
     <div class="receipt-report-header">
         <div class="logo-container">
-            <img src="{{ asset('dashboard_assets/images/Logo.png') }}" alt="Umoj Lutheran Hostel Logo">
+            <img src="{{ asset('dashboard_assets/images/Logo.png') }}" alt="Umoja Lutheran Hostel Logo">
         </div>
-        <h1>Umoj Lutheran Hostel</h1>
+        <h1>Umoja Lutheran Hostel</h1>
         <div style="line-height: 1.6;">
             <p><strong>Location:</strong> Sokoine Road - Moshi, Kilimanjaro - Tanzania</p>
             <p><strong>Mobile/WhatsApp:</strong> 0677-155-156 / +255 677-155-157</p>
-            <p><strong>Email:</strong> info@Umoj Lutheran Hostelhotel.co.tz / infoUmoj Lutheran Hostelhotel@gmail.com</p>
+            <p><strong>Email:</strong> info@Umoja Lutheran Hostelhotel.co.tz / infoUmoja Lutheran Hostelhotel@gmail.com</p>
         </div>
-        <p style="margin-top: 15px; font-size: 18px; font-weight: bold; color: #e07632;">Bar Operations Report</p>
+        <p style="margin-top: 15px; font-size: 18px; font-weight: bold; color: #940000;">Bar Operations Report</p>
     </div>
     
     <!-- Report Number -->
@@ -448,7 +448,7 @@
                 </div>
                 <div class="receipt-info-row">
                     <span class="receipt-info-label">Total Revenue:</span>
-                    <span class="receipt-info-value" style="color: #e07632; font-size: 16px;"><strong>{{ number_format($totalRev + $eventRev) }} TZS</strong></span>
+                    <span class="receipt-info-value" style="color: #940000; font-size: 16px;"><strong>{{ number_format($totalRev + $eventRev) }} TZS</strong></span>
                 </div>
                 <div class="receipt-info-row" style="margin-top: 5px;">
                     <span class="receipt-info-label">Inventory Items:</span>
@@ -538,7 +538,7 @@
                     </td>
                     <td style="text-align: center;">{{ number_format($item->expected_revenue) }}</td>
                     <td style="text-align: center; font-weight: bold; color: #28a745;">{{ number_format($item->actual_revenue) }}</td>
-                    <td style="text-align: center; color: #e07632;">{{ number_format($item->max_potential_revenue) }}</td>
+                    <td style="text-align: center; color: #940000;">{{ number_format($item->max_potential_revenue) }}</td>
                     <td style="text-align: center; color: #666;">{{ number_format($item->stock_value) }}</td>
                     <td style="text-align: center; font-weight: bold; color: #17a2b8;">{{ number_format($item->profit_potential) }}</td>
                     <td style="text-align: right; background-color: #f8f9fa;"><strong>{{ number_format($item->closing_stock, 1) }}</strong></td>
@@ -601,7 +601,7 @@
                     @endforeach
                     <tr style="background-color: #fcfcfc; border-bottom: 2px solid #eee;">
                         <td colspan="4" style="text-align: right; font-weight: bold; padding: 5px 12px;">SUBTOTAL:</td>
-                        <td style="text-align: right; font-weight: bold; padding: 5px 12px; color: #e07632;">{{ number_format($groupTotal) }}</td>
+                        <td style="text-align: right; font-weight: bold; padding: 5px 12px; color: #940000;">{{ number_format($groupTotal) }}</td>
                     </tr>
                 @empty
                     <tr>
@@ -612,7 +612,7 @@
                 @if(collect($salesData)->count() > 0)
                 <tr class="total-row" style="background-color: #f8f9fa;">
                     <td colspan="4" style="text-align: right; font-size: 14px;"><strong>TOTAL DIRECT SALES:</strong></td>
-                    <td style="text-align: right; color: #e07632; font-size: 16px;"><strong>{{ number_format($totalRev) }} TZS</strong></td>
+                    <td style="text-align: right; color: #940000; font-size: 16px;"><strong>{{ number_format($totalRev) }} TZS</strong></td>
                 </tr>
                 @endif
             </tbody>
@@ -722,9 +722,9 @@
                 <strong style="font-size: 20px; color: #28a745;">{{ number_format($totalActual) }} TZS</strong>
             </div>
             <div style="font-size: 20px; color: #999;">/</div>
-            <div style="text-align: center; border: 2px solid #e07632; padding: 10px 15px; background: #fff; border-radius: 5px; min-width: 180px;">
-                <span style="font-size: 11px; color: #e07632; text-transform: uppercase; font-weight: bold;">POTENTIAL (FULL STOCK)</span><br>
-                <strong style="font-size: 20px; color: #e07632;">{{ number_format($totalMaxPotential) }} TZS</strong>
+            <div style="text-align: center; border: 2px solid #940000; padding: 10px 15px; background: #fff; border-radius: 5px; min-width: 180px;">
+                <span style="font-size: 11px; color: #940000; text-transform: uppercase; font-weight: bold;">POTENTIAL (FULL STOCK)</span><br>
+                <strong style="font-size: 20px; color: #940000;">{{ number_format($totalMaxPotential) }} TZS</strong>
             </div>
         </div>
         
@@ -753,7 +753,7 @@
     
     <!-- Footer -->
     <div class="receipt-footer">
-        <p><strong>Umoj Lutheran Hostel Management System</strong></p>
+        <p><strong>Umoja Lutheran Hostel Management System</strong></p>
         <p>This is an official bar production and stock report generated for auditing purposes.</p>
         <p class="powered-by" style="color: #940000; margin-top: 15px; font-weight: bold;">Powered By EmCa Technologies</p>
     </div>

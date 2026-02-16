@@ -18,5 +18,5 @@ Login Now
 If you did not request this, please contact us immediately.
 
 Best regards,  
-PrimeLand Hotel Team
+Umoja Lutheran Hostel Team
 </x-mail::message>

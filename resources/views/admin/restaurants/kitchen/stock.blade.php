@@ -25,12 +25,12 @@
             <!-- Premium Branding Header (Only shown when printing) -->
             <div class="d-none d-print-block text-center mb-5">
                 <div class="mb-3">
-                    <img src="{{ asset('dashboard_assets/images/Logo.png') }}" alt="PrimeLand Logo" style="height: 80px;">
+                    <img src="{{ asset('royal-master/image/logo/Logo.png') }}" alt="Umoja Lutheran Logo" style="height: 80px;">
                 </div>
-                <h1 class="mb-1" style="color: #e07632; font-weight: 800; letter-spacing: 2px;">PRIMELAND HOTEL</h1>
+                <h1 class="mb-1" style="color: #940000; font-weight: 800; letter-spacing: 2px;">UMOJA LUTHERAN HOSTEL</h1>
                 <p class="mb-0 text-dark">Location: Sokoine Road - Moshi, Kilimanjaro - Tanzania</p>
                 <p class="mb-2 text-dark font-weight-bold">Mobile/WhatsApp: 0677-155-156 / +255 677-155-157</p>
-                <div style="height: 4px; background: #e07632; width: 100px; margin: 15px auto;"></div>
+                <div style="height: 4px; background: #940000; width: 100px; margin: 15px auto;"></div>
                 <h3 class="text-uppercase font-weight-bold mt-3">KITCHEN INVENTORY STOCK SHEET</h3>
                 <p class="text-muted">Generated on: {{ now()->format('d/m/Y H:i') }}</p>
             </div>

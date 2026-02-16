@@ -23,6 +23,6 @@
     <p>Thank you!</p>
     
     <hr>
-    <p><small>This is an automated notification from PrimeLand Hotel Management System.</small></p>
+    <p><small>This is an automated notification from Umoja Lutheran Hostel Management System.</small></p>
 </body>
 </html>

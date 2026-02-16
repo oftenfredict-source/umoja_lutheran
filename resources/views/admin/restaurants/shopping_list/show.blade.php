@@ -28,7 +28,7 @@
             <div class="invoice p-3 mb-3">
                 <div class="row mb-1">
                     <div class="col-12 text-center border-bottom pb-1">
-                        <h4 style="margin: 0; color: #000; font-weight: bold;">PRIMELAND HOTEL - SHOPPING LIST</h4>
+                        <h4 style="margin: 0; color: #000; font-weight: bold;">UMOJA LUTHERAN HOSTEL - SHOPPING LIST</h4>
                         <p style="font-size: 10px; margin: 0;">Ref: SL-{{ $shoppingList->id }} | Date: {{ $shoppingList->created_at->format('d/m/Y') }}</p>
                     </div>
                 </div>

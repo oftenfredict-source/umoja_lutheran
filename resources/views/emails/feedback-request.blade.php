@@ -3,7 +3,7 @@
 
 Hello {{ $booking->guest_name }},
 
-Thank you for staying with us at PrimeLand Hotel! We hope you had a wonderful experience.
+Thank you for staying with us at Umoja Lutheran Hostel! We hope you had a wonderful experience.
 
 Your feedback is invaluable to us and helps us improve our services for future guests.
 
@@ -36,7 +36,7 @@ Book Your Next Stay
 We look forward to welcoming you back soon!
 
 Best regards,  
-PrimeLand Hotel Team
+Umoja Lutheran Hostel Team
 </x-mail::message>
 
 

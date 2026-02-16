@@ -44,6 +44,6 @@ View My Bookings
 If you have any questions, please contact reception.
 
 Best regards,  
-PrimeLand Hotel Team
+Umoja Lutheran Hostel Team
 </x-mail::message>
 

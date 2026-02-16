@@ -50,15 +50,15 @@ View Booking Details
 </x-mail::button>
 
 Best regards,  
-**PrimeLand Hotel System**
+**Umoja Lutheran Hostel System**
 
 ---
 
-**PrimeLand Hotel**  
+**Umoja Lutheran Hostel**  
 Mobile/WhatsApp: 0677-155-156 / +255 677-155-157  
-Email: info@primelandhotel.co.tz / infoprimelandhotel@gmail.com
+Email: info@umojahostel.com / infoprimelandhotel@gmail.com
 
-© {{ date('Y') }} PrimeLand Hotel. All rights reserved.
+© {{ date('Y') }} Umoja Lutheran Hostel. All rights reserved.
 </x-mail::message>
 
 

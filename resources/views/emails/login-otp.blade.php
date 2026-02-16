@@ -3,7 +3,7 @@
 
 Hello {{ $userName }},
 
-You have requested to login to your PrimeLand Hotel account. Please use the verification code below to complete your login.
+You have requested to login to your Umoja Lutheran Hostel account. Please use the verification code below to complete your login.
 
 ## Your Verification Code
 
@@ -22,13 +22,13 @@ Go to Login Page
 </x-mail::button>
 
 Best regards,  
-**PrimeLand Hotel Team**
+**Umoja Lutheran Hostel Team**
 
 ---
 
-**PrimeLand Hotel**  
+**Umoja Lutheran Hostel**  
 Mobile/WhatsApp: 0677-155-156 / +255 677-155-157  
-Email: info@primelandhotel.co.tz / infoprimelandhotel@gmail.com
+Email: info@umojahostel.com / infoprimelandhotel@gmail.com
 
-© {{ date('Y') }} PrimeLand Hotel. All rights reserved.
+© {{ date('Y') }} Umoja Lutheran Hostel. All rights reserved.
 </x-mail::message>

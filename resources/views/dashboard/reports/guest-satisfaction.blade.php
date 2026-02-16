@@ -95,9 +95,9 @@
 <div class="receipt-report-container">
     <div class="receipt-report-header">
         <div class="logo-container">
-            <img src="{{ asset('royal-master/image/logo/Logo.png') }}" alt="Umoj Lutheran Hostel Logo" onerror="this.style.display='none';">
+            <div class="logo-text-brand" style="margin-bottom: 10px; display: inline-block;"><div style="background: #940000; color: white; width: 40px; height: 40px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold;">U</div></div>
         </div>
-        <h1>Umoj Lutheran Hostel</h1>
+        <h1>Umoja Lutheran Hostel</h1>
         <div style="margin-top: 10px; margin-bottom: 10px; line-height: 1.8;">
             <p style="margin: 5px 0; font-size: 13px; color: #555;">
                 <strong>Location:</strong> Sokoine Road-Moshi Kilimanjaro-Tanzania
@@ -106,7 +106,7 @@
                 <strong>Mobile/WhatsApp:</strong> 0677-155-156 / +255 677-155-157
             </p>
             <p style="margin: 5px 0; font-size: 13px; color: #555;">
-                <strong>Email:</strong> info@Umoj Lutheran Hostelhotel.co.tz / infoUmoj Lutheran Hostelhotel@gmail.com
+                <strong>Email:</strong> info@Umoja Lutheran Hostelhotel.co.tz / infoUmoja Lutheran Hostelhotel@gmail.com
             </p>
         </div>
         <p style="margin-top: 15px; font-size: 16px; font-weight: bold; color: #e07632;">Guest Satisfaction Report</p>
@@ -351,8 +351,8 @@
     @endif
     
     <div class="receipt-footer">
-        <p><strong>Umoj Lutheran Hostel</strong></p>
-        <p>This report has been generated automatically by the Umoj Lutheran Hostel Management System.</p>
+        <p><strong>Umoja Lutheran Hostel</strong></p>
+        <p>This report has been generated automatically by the Umoja Lutheran Hostel Management System.</p>
         <p style="margin-top: 15px;">This is an official report. Please keep this for your records.</p>
         <p style="margin-top: 10px; font-size: 9px;">Generated on: {{ now()->format('F d, Y \a\t g:i A') }}</p>
         <p class="powered-by">Powered By <strong>EmCa Technologies</strong></p>
@@ -391,3 +391,4 @@ function printReport() {
 }
 </script>
 @endsection
+

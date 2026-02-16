@@ -3,7 +3,7 @@
 
 Hello {{ $dayService->guest_name }},
 
-Thank you for choosing PrimeLand Hotel for your ceremony/birthday celebration! We're excited to host your special event.
+Thank you for choosing Umoja Lutheran Hostel for your ceremony/birthday celebration! We're excited to host your special event.
 
 ## Service Details
 
@@ -81,14 +81,14 @@ If you have any questions or need to make changes to your ceremony service, plea
 
 **Phone:** 0677-155-156 / +255 677-155-157
 
-**Email:** info@primelandhotel.co.tz | infoprimelandhotel@gmail.com
+**Email:** info@umojahostel.com | infoprimelandhotel@gmail.com
 
 **Location:** Sokoine Road - Moshi Kilimanjaro - Tanzania
 
 We look forward to making your celebration memorable!
 
 Best regards,  
-PrimeLand Hotel Team
+Umoja Lutheran Hostel Team
 </x-mail::message>
 
 

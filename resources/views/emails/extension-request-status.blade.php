@@ -55,6 +55,6 @@ If you have any questions, please contact reception.
 **Room:** {{ $booking->room->room_number }} ({{ $booking->room->room_type }})
 
 Best regards,  
-PrimeLand Hotel Team
+Umoja Lutheran Hostel Team
 </x-mail::message>
 

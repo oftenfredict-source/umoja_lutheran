@@ -4,8 +4,8 @@
         <!-- Required meta tags -->
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-        <link rel="icon" href="{{ asset('royal-master/image/logo/Logo.png') }}" type="image/png">
-        <title>Online Booking Coming Soon - PrimeLand Hotel</title>
+        
+        <title>Online Booking Coming Soon - Umoja Lutheran Hostel</title>
         <!-- Bootstrap CSS -->
         <link rel="stylesheet" href="{{ asset('royal-master/css/bootstrap.css') }}">
         <link rel="stylesheet" href="{{ asset('royal-master/vendors/linericon/style.css') }}">
@@ -442,7 +442,7 @@
                     <div class="col-lg-6 mb-4 mb-lg-0">
                         <div style="border-radius: 15px; overflow: hidden; box-shadow: 0 8px 30px rgba(0,0,0,0.12); position: relative;">
                             <div style="position: absolute; top: 20px; left: 20px; background: #e77a3a; color: #fff; padding: 8px 20px; border-radius: 25px; font-size: 13px; font-weight: 600; z-index: 2;">Coming Soon</div>
-                            <img class="img-fluid" src="{{ asset('hotel_gallery/room_(5).jpg') }}" alt="PrimeLand Hotel" style="width: 100%; height: 450px; object-fit: cover;">
+                            <img class="img-fluid" src="{{ asset('hotel_gallery/room_(5).jpg') }}" alt="Umoja Lutheran Hostel" style="width: 100%; height: 450px; object-fit: cover;">
                         </div>
                     </div>
                     <div class="col-lg-6">
@@ -450,7 +450,7 @@
                             <div style="width: 50px; height: 4px; background: #e77a3a; margin-bottom: 20px; border-radius: 2px;"></div>
                             <h3 style="color: #222; font-size: 28px; font-weight: 700; margin-bottom: 20px;">Book Your Stay Directly</h3>
                             <p style="color: #666; line-height: 1.95; font-size: 16px; margin-bottom: 20px;">
-                                While we're building our online booking platform, we're here to help you make your reservation directly. Our friendly staff is available 24/7 to assist you with booking your perfect stay at PrimeLand Hotel.
+                                While we're building our online booking platform, we're here to help you make your reservation directly. Our friendly staff is available 24/7 to assist you with booking your perfect stay at Umoja Lutheran Hostel.
                             </p>
                             <p style="color: #666; line-height: 1.95; font-size: 16px; margin-bottom: 25px;">
                                 Experience luxury accommodation at the base of Mount Kilimanjaro. Contact us today to secure your room and start planning your unforgettable Tanzanian adventure.
@@ -526,7 +526,7 @@
                                         <div>
                                             <h4 style="color: #222; font-size: 18px; font-weight: 600; margin-bottom: 8px;">Email</h4>
                                             <p style="color: #666; margin: 0; line-height: 1.8;">
-                                                <a href="mailto:info@primelandhotel.co.tz" style="color: #666; text-decoration: none; transition: color 0.3s;">info@primelandhotel.co.tz</a>
+                                                <a href="mailto:info@umojahostel.com" style="color: #666; text-decoration: none; transition: color 0.3s;">info@umojahostel.com</a>
                                             </p>
                                         </div>
                                     </div>
@@ -564,3 +564,4 @@
         @include('landing_page_views.partials.chat-widgets')
     </body>
 </html>
+

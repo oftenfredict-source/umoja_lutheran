@@ -37,6 +37,6 @@ Your checkout extension request has been submitted and is pending approval from 
 If you have any questions, please contact reception.
 
 Best regards,  
-PrimeLand Hotel Team
+Umoja Lutheran Hostel Team
 </x-mail::message>
 

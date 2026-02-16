@@ -3,7 +3,7 @@
 
 Hello {{ $booking->guest_name }},
 
-Thank you for your booking at PrimeLand Hotel! We're excited to host you.
+Thank you for your booking at Umoja Lutheran Hostel! We're excited to host you.
 
 ## Booking Details
 
@@ -82,5 +82,5 @@ All cancellations must be received with written confirmation.
 If you have any questions, please contact us at your earliest convenience.
 
 Best regards,  
-PrimeLand Hotel Team
+Umoja Lutheran Hostel Team
 </x-mail::message>

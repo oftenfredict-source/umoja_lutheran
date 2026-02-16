@@ -44,5 +44,5 @@ Login to Your Account
 If you have any questions or special requests, please don't hesitate to contact us.
 
 Best regards,  
-PrimeLand Hotel Team
+Umoja Lutheran Hostel Team
 </x-mail::message>

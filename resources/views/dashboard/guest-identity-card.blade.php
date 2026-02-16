@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Umoj Lutheran Hostel - Guest Identity Card</title>
+    <title>Umoja Lutheran Hostel - Guest Identity Card</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * {
@@ -958,7 +958,7 @@
 <body>
     <div class="print-container">
         <div class="print-header">
-            <div class="hotel-name">Umoj Lutheran Hostel</div>
+            <div class="hotel-name">Umoja Lutheran Hostel</div>
             <h1>GUEST IDENTITY CARD</h1>
             <p>Official Guest Identification Card</p>
         </div>
@@ -968,10 +968,10 @@
             <div class="card-container">
                 <div class="card-left-section">
                     <div class="card-header">
-                        <img src="{{ asset('royal-master/image/logo/Logo.png') }}" alt="Umoj Lutheran Hostel Logo" class="hotel-logo-img" onerror="this.style.display='none';">
+                        <div class="logo-text-brand" style="margin-bottom: 10px; display: inline-block;"><div style="background: #940000; color: white; width: 40px; height: 40px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold;">U</div></div>
                     </div>
                     <div class="hotel-text-brand">
-                        <div class="hotel-logo">Umoj Lutheran Hostel</div>
+                        <div class="hotel-logo">Umoja Lutheran Hostel</div>
                         <div class="hotel-subtitle">Hotel</div>
                     </div>
                     <div class="guest-photo-section">
@@ -1123,3 +1123,4 @@
     </script>
 </body>
 </html>
+

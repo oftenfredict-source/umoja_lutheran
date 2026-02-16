@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Day Services Report - {{ $dateRange['label'] }} - Umoj Lutheran Hostel</title>
+    <title>Day Services Report - {{ $dateRange['label'] }} - Umoja Lutheran Hostel</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
     <!-- Prevent browser from adding headers/footers when printing -->
     <style>
@@ -60,7 +60,7 @@
             transform: translate(-50%, -50%) rotate(-45deg);
             width: 500px;
             height: 500px;
-            background-image: url('{{ asset('royal-master/image/logo/Logo.png') }}');
+            background-image: none !important;
             background-repeat: no-repeat;
             background-position: center;
             background-size: contain;
@@ -481,9 +481,9 @@
         <!-- Header -->
         <div class="header">
             <div class="logo-container">
-                <img src="{{ asset('royal-master/image/logo/Logo.png') }}" alt="Umoj Lutheran Hostel Logo" onerror="this.style.display='none';">
+                <div class="logo-text-brand" style="margin-bottom: 10px; display: inline-block;"><div style="background: #940000; color: white; width: 40px; height: 40px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold;">U</div></div>
             </div>
-            <h1>Umoj Lutheran Hostel</h1>
+            <h1>Umoja Lutheran Hostel</h1>
             <div style="margin-top: 10px; margin-bottom: 10px; line-height: 1.8;">
                 <p style="margin: 5px 0; font-size: 13px; color: #555;">
                     <strong>Location:</strong> Sokoine Road-Moshi Kilimanjaro-Tanzania
@@ -492,7 +492,7 @@
                     <strong>Mobile/WhatsApp:</strong> 0677-155-156 / +255 677-155-157
                 </p>
                 <p style="margin: 5px 0; font-size: 13px; color: #555;">
-                    <strong>Email:</strong> info@Umoj Lutheran Hostelhotel.co.tz / infoUmoj Lutheran Hostelhotel@gmail.com
+                    <strong>Email:</strong> info@Umoja Lutheran Hostelhotel.co.tz / infoUmoja Lutheran Hostelhotel@gmail.com
                 </p>
             </div>
             <p style="margin-top: 15px; font-size: 16px; font-weight: bold; color: #e07632;">Day Services Report</p>
@@ -626,8 +626,8 @@
         
         <!-- Footer -->
         <div class="footer">
-            <p><strong>Umoj Lutheran Hostel</strong></p>
-            <p>This report has been generated automatically by the Umoj Lutheran Hostel Management System.</p>
+            <p><strong>Umoja Lutheran Hostel</strong></p>
+            <p>This report has been generated automatically by the Umoja Lutheran Hostel Management System.</p>
             <p style="margin-top: 15px;">This is an official report. Please keep this for your records.</p>
             <p style="margin-top: 10px; font-size: 9px;">Generated on: {{ now()->format('F d, Y \a\t g:i A') }}</p>
             <p style="margin-top: 15px; font-size: 9px; color: #940000;">
@@ -680,3 +680,4 @@
     </script>
 </body>
 </html>
+

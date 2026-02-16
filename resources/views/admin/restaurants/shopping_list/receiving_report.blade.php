@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Receiving Report - {{ $shoppingList->name }} - PrimeLand Hotel</title>
+    <title>Receiving Report - {{ $shoppingList->name }} - Umoja Lutheran Hostel</title>
     <style>
         @media print {
             @page { margin: 0 !important; size: A4; }
@@ -35,7 +35,7 @@
             transform: translate(-50%, -50%) rotate(-45deg);
             width: 500px;
             height: 500px;
-            background-image: url('{{ url('royal-master/image/logo/Logo.png') }}');
+            background-image: none;
             background-repeat: no-repeat;
             background-position: center;
             background-size: contain;
@@ -82,12 +82,12 @@
         }
         .header {
             text-align: center;
-            border-bottom: 3px solid #e07632;
+            border-bottom: 3px solid #940000;
             padding-bottom: 20px;
             margin-bottom: 30px;
         }
         .header .logo-container img { max-height: 80px; max-width: 300px; height: auto; width: auto; }
-        .header h1 { color: #e07632; font-size: 28px; margin-bottom: 5px; font-weight: bold; }
+        .header h1 { color: #940000; font-size: 28px; margin-bottom: 5px; font-weight: bold; }
         .receipt-title {
             text-align: center;
             font-size: 18px;
@@ -98,9 +98,9 @@
         }
         .info-section { margin-bottom: 25px; }
         .info-section h3 {
-            color: #e07632;
+            color: #940000;
             font-size: 14px;
-            border-bottom: 2px solid #e07632;
+            border-bottom: 2px solid #940000;
             padding-bottom: 8px;
             margin-bottom: 15px;
             font-weight: bold;
@@ -127,7 +127,7 @@
         
         .print-button { text-align: center; margin: 30px 0; }
         .print-button button {
-            background-color: #e07632;
+            background-color: #940000;
             color: #fff;
             border: none;
             padding: 12px 30px;
@@ -136,7 +136,7 @@
             border-radius: 4px;
             font-weight: bold;
         }
-        .print-button button:hover { background-color: #c86528; }
+        .print-button button:hover { background-color: #7b0000; }
         .checkbox-cell { text-align: center; width: 40px; }
         .checkbox-box {
             display: inline-block;
@@ -198,11 +198,11 @@
         <!-- Header -->
         <!-- Header -->
         <div class="header" style="display: flex; justify-content: center; align-items: center; flex-direction: column; margin-bottom: 20px; position: relative; z-index: 1;">
-            <div class="logo-container" style="text-align: center; margin-bottom: 10px;">
-                <img src="{{ url('royal-master/image/logo/Logo.png') }}" alt="Logo" style="max-height: 50px;">
+            <div class="logo-text-brand" style="margin-bottom: 10px; display: inline-block;">
+                <div style="background: #940000; color: white; width: 40px; height: 40px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold;">U</div>
             </div>
-            <h4 style="margin: 0; color: #000; font-weight: bold; text-align: center;">PRIMELAND HOTEL</h4>
-            <p style="font-size: 11px; font-weight: bold; margin: 0; color: #e07632; text-align: center;">RECEIVING REPORT</p>
+            <h4 style="margin: 0; color: #000; font-weight: bold; text-align: center;">UMOJA LUTHERAN HOSTEL</h4>
+            <p style="font-size: 11px; font-weight: bold; margin: 0; color: #940000; text-align: center;">RECEIVING REPORT</p>
             <p style="font-size: 9px; margin: 0; text-align: center;">Ref: SL-{{ $shoppingList->id }} | Date: {{ now()->format('d/m/Y') }} | Time: {{ now()->format('H:i') }}</p>
         </div>
         
@@ -271,8 +271,8 @@
                     
                     @foreach($sortedCategories as $categoryKey)
                         @php $items = $groupedItems[$categoryKey]; @endphp
-                        <tr style="background-color: #e0763220;">
-                            <td colspan="10" style="font-weight: bold; color: #e07632;">
+                        <tr style="background-color: #94000020;">
+                            <td colspan="10" style="font-weight: bold; color: #940000;">
                                 {{ $items->first()->category_name ?? ucfirst(str_replace('_', ' ', $categoryKey)) }}
                             </td>
                         </tr>
@@ -334,7 +334,7 @@
                     <tr style="background-color: #f8f9fa; font-weight: bold;">
                         <td colspan="7" style="text-align: right; padding: 15px;">TOTALS:</td>
                         <td style="text-align: right; padding: 15px; background: #fdfdfd;">{{ number_format($plannedGrandTotal, 0) }}</td>
-                        <td colspan="2" style="text-align: right; padding: 15px; font-size: 14px; color: #e07632;">{{ number_format($grandTotal, 0) }}</td>
+                        <td colspan="2" style="text-align: right; padding: 15px; font-size: 14px; color: #940000;">{{ number_format($grandTotal, 0) }}</td>
                     </tr>
                 </tfoot>
             </table>

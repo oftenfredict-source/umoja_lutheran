@@ -89,7 +89,7 @@
     transform: translate(-50%, -50%) rotate(-45deg);
     width: 600px;
     height: 600px;
-    background-image: url('{{ asset('dashboard_assets/images/Logo.png') }}');
+    background-image: none;
     background-repeat: no-repeat;
     background-position: center;
     background-size: contain;
@@ -106,7 +106,7 @@
 
 .receipt-report-header {
     text-align: center;
-    border-bottom: 3px solid #e07632;
+    border-bottom: 3px solid #940000;
     padding-bottom: 20px;
     margin-bottom: 30px;
 }
@@ -120,7 +120,7 @@
 }
 
 .receipt-report-header h1 {
-    color: #e07632;
+    color: #940000;
     font-size: 32px;
     margin-bottom: 5px;
     font-weight: 900;
@@ -156,7 +156,7 @@
 }
 
 .print-button-section button {
-    background-color: #e07632;
+    background-color: #940000;
     color: #fff;
     border: none;
     padding: 12px 40px;
@@ -164,12 +164,12 @@
     cursor: pointer;
     border-radius: 4px;
     font-weight: bold;
-    box-shadow: 0 4px 10px rgba(224, 118, 50, 0.3);
+    box-shadow: 0 4px 10px rgba(148, 0, 0, 0.3);
     transition: all 0.3s ease;
 }
 
 .print-button-section button:hover {
-    background-color: #c86528;
+    background-color: #7b0000;
     transform: translateY(-2px);
 }
 
@@ -178,9 +178,9 @@
 }
 
 .receipt-info-section h3 {
-    color: #e07632;
+    color: #940000;
     font-size: 15px;
-    border-bottom: 2px solid #e07632;
+    border-bottom: 2px solid #940000;
     padding-bottom: 8px;
     margin-bottom: 15px;
     font-weight: bold;
@@ -368,16 +368,16 @@
 <div class="receipt-report-container">
     <!-- Header -->
     <div class="receipt-report-header">
-        <div class="logo-container">
-            <img src="{{ asset('dashboard_assets/images/Logo.png') }}" alt="PrimeLand Logo">
+        <div class="logo-text-brand" style="margin-bottom: 10px;">
+            <div style="background: #940000; color: white; width: 50px; height: 50px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; font-size: 28px; font-weight: bold; margin-bottom: 5px;">U</div>
         </div>
-        <h1>PRIMELAND HOTEL</h1>
+        <h1>UMOJA LUTHERAN HOSTEL</h1>
         <div style="line-height: 1.6;">
             <p><strong>Location:</strong> Sokoine Road - Moshi, Kilimanjaro - Tanzania</p>
             <p><strong>Mobile/WhatsApp:</strong> 0677-155-156 / +255 677-155-157</p>
-            <p><strong>Email:</strong> info@primelandhotel.co.tz / infoprimelandhotel@gmail.com</p>
+            <p><strong>Email:</strong> info@umojahostel.com / umojahostel@gmail.com</p>
         </div>
-        <p style="margin-top: 15px; font-size: 18px; font-weight: bold; color: #e07632;">Kitchen Operations Report</p>
+        <p style="margin-top: 15px; font-size: 18px; font-weight: bold; color: #940000;">Kitchen Operations Report</p>
     </div>
     
     <!-- Report Number -->
@@ -707,7 +707,7 @@
     
     <!-- Footer -->
     <div class="receipt-footer">
-        <p><strong>PrimeLand Hotel Management System</strong></p>
+        <p><strong>Umoja Lutheran Hostel Management System</strong></p>
         <p>This is an official kitchen production and stock report generated for auditing purposes.</p>
         <p class="powered-by" style="color: #940000; margin-top: 15px; font-weight: bold;">Powered By EmCa Technologies</p>
     </div>

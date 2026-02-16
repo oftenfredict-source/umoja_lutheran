@@ -3,7 +3,7 @@
 
 Hello {{ $company->name }},
 
-Thank you for your corporate booking at PrimeLand Hotel. This email contains your booking invoice and summary.
+Thank you for your corporate booking at Umoja Lutheran Hostel. This email contains your booking invoice and summary.
 
 ## Company Information
 
@@ -77,8 +77,8 @@ All cancellations must be received with written confirmation.
 
 If you have any questions, please contact us at your earliest convenience.
 
-Thank you for choosing PrimeLand Hotel!
+Thank you for choosing Umoja Lutheran Hostel!
 
 Best regards,  
-PrimeLand Hotel Team
+Umoja Lutheran Hostel Team
 </x-mail::message>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stock Transfer Note - {{ $transfer->transfer_reference }} - Umoj Lutheran Hostel</title>
+    <title>Stock Transfer Note - {{ $transfer->transfer_reference }} - Umoja Lutheran Hostel</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
     <style>
         @media print {
@@ -37,7 +37,7 @@
             transform: translate(-50%, -50%) rotate(-45deg);
             width: 500px;
             height: 500px;
-            background-image: url('{{ asset('royal-master/image/logo/Logo.png') }}');
+            background-image: none !important;
             background-repeat: no-repeat;
             background-position: center;
             background-size: contain;
@@ -113,7 +113,7 @@
 <body>
     <div class="receipt-container">
         <div class="header">
-            <h1>Umoj Lutheran Hostel</h1>
+            <h1>Umoja Lutheran Hostel</h1>
             <p>Sokoine Road - Moshi Kilimanjaro - Tanzania</p>
             <p>Phone: 0677-155-156 / +255 677-155-157</p>
         </div>
@@ -188,7 +188,7 @@
         </div>
 
         <div class="footer">
-            <p>Umoj Lutheran Hostel - Excellence in Hospitality</p>
+            <p>Umoja Lutheran Hostel - Excellence in Hospitality</p>
             <p>Powered By EmCa Technologies</p>
         </div>
     </div>
@@ -198,3 +198,4 @@
     </script>
 </body>
 </html>
+

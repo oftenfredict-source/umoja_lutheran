@@ -4,7 +4,7 @@
         <!-- Required meta tags -->
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
-        <link rel="icon" href="{{ asset('royal-master/image/logo/Logo.png') }}" type="image/png">
+        
         <title>Book a Room - {{ config('app.name') }}</title>
         <!-- Bootstrap CSS -->
         <link rel="stylesheet" href="{{ asset('royal-master/css/bootstrap.css') }}">
@@ -4834,7 +4834,7 @@
                 <p><strong>{{ config('app.name') }}</strong><br>
                 Sokoine Road, Moshi, Kilimanjaro, Tanzania<br>
                 Phone: +255 677-155-156 / +255 677-155-157<br>
-                Email: info@primelandhotel.co.tz</p>
+                Email: info@umojahostel.com</p>
             </div>
             <div class="terms-modal-footer">
                 <button type="button" class="btn btn-primary" onclick="closeTermsModal()">I Understand</button>
@@ -6861,6 +6861,7 @@
 </body>
 
 </html>
+
 
 
 

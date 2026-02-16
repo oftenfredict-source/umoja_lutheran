@@ -3,7 +3,7 @@
 
 Hello {{ $booking->guest_name }},
 
-Welcome! You have successfully checked in to PrimeLand Hotel.
+Welcome! You have successfully checked in to Umoja Lutheran Hostel.
 
 ## Your Room Details
 
@@ -19,7 +19,7 @@ Welcome! You have successfully checked in to PrimeLand Hotel.
 
 ## WiFi Information
 
-**Network Name:** {{ $wifiNetworkName ?? 'PrimeLand Hotel WiFi' }}
+**Network Name:** {{ $wifiNetworkName ?? 'Umoja Lutheran Hostel WiFi' }}
 
 **Password:** {{ $wifiPassword ?? 'Please ask at reception' }}
 
@@ -47,6 +47,6 @@ Access Your Dashboard
 We hope you enjoy your stay with us!
 
 Best regards,  
-PrimeLand Hotel Team
+Umoja Lutheran Hostel Team
 </x-mail::message>
 

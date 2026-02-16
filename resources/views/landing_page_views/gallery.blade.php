@@ -4,8 +4,8 @@
         <!-- Required meta tags -->
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-        <link rel="icon" href="{{ asset('royal-master/image/logo/Logo.png') }}" type="image/png">
-        <title>Gallery - PrimeLand Hotel</title>
+        
+        <title>Gallery - Umoja Lutheran Hostel</title>
         <!-- Bootstrap CSS -->
         <link rel="stylesheet" href="{{ asset('royal-master/css/bootstrap.css') }}">
         <link rel="stylesheet" href="{{ asset('royal-master/vendors/linericon/style.css') }}">
@@ -671,7 +671,7 @@
             <div class="container" style="position: relative; z-index: 1;">
                 <div class="page-cover text-center">
                     <h2 class="page-cover-tittle" style="color: #e77a3a;">Hotel Gallery</h2>
-                    <p style="color: white; font-size: 16px; margin-top: 15px; margin-bottom: 20px;">Explore the beauty and elegance of PrimeLand Hotel through our photo collection</p>
+                    <p style="color: white; font-size: 16px; margin-top: 15px; margin-bottom: 20px;">Explore the beauty and elegance of Umoja Lutheran Hostel through our photo collection</p>
                     <ol class="breadcrumb">
                         <li><a href="{{ url('/') }}">Home</a></li>
                         <li class="active">Gallery</li>
@@ -690,7 +690,7 @@
                         Photo Collection
                         <span style="position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 60px; height: 3px; background: #e77a3a; border-radius: 2px;"></span>
                     </h2>
-                    <p style="font-size: 16px; color: #777; margin-top: 10px; margin-bottom: 0;">Explore the beauty and elegance of PrimeLand Hotel through our photo collection</p>
+                    <p style="font-size: 16px; color: #777; margin-top: 10px; margin-bottom: 0;">Explore the beauty and elegance of Umoja Lutheran Hostel through our photo collection</p>
                 </div>
                 
                 <!-- Gallery Filter -->
@@ -726,7 +726,7 @@
                                     $category = 'outside';
                                 }
                                 
-                                $displayName = str_replace(['_', '(1)', '(2)', '(3)', '(4)', '(5)', '(6)', '(7)', 'primeland hotel '], [' ', '', '', '', '', '', '', '', ''], $imageName);
+                                $displayName = str_replace(['_', '(1)', '(2)', '(3)', '(4)', '(5)', '(6)', '(7)', 'Umoja Lutheran Hostel '], [' ', '', '', '', '', '', '', '', ''], $imageName);
                                 $displayName = ucwords($displayName);
                             @endphp
                             <div class="gallery-item" data-category="{{ $category }}">
@@ -839,4 +839,5 @@
         @include('landing_page_views.partials.chat-widgets')
     </body>
 </html>
+
 

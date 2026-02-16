@@ -4,7 +4,7 @@
 Hello {{ $booking->guest_name }},
 
 @if($daysUntil == 0)
-**Your check-out is today!** We hope you enjoyed your stay at PrimeLand Hotel.
+**Your check-out is today!** We hope you enjoyed your stay at Umoja Lutheran Hostel.
 @else
 Your check-out is in **{{ $daysUntil }} day(s)**. We hope you're enjoying your stay!
 @endif
@@ -39,9 +39,9 @@ View Checkout Bill
 
 If you'd like to extend your stay, please contact reception as soon as possible.
 
-Thank you for choosing PrimeLand Hotel. We hope to see you again soon!
+Thank you for choosing Umoja Lutheran Hostel. We hope to see you again soon!
 
 Best regards,  
-PrimeLand Hotel Team
+Umoja Lutheran Hostel Team
 </x-mail::message>
 
