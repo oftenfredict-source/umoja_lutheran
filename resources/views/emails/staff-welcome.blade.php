@@ -1,9 +1,9 @@
 <x-mail::message>
-# Welcome to PrimeLand Hotel Staff Portal
+# Welcome to Umoja Lutheran Hostel Staff Portal
 
 Hello {{ $user->name }},
 
-Your staff account has been successfully created at PrimeLand Hotel. We're excited to have you as part of our team!
+Your staff account has been successfully created at Umoja Lutheran Hostel. We're excited to have you as part of our team!
 
 ## Your Account Credentials
 
@@ -60,15 +60,14 @@ If you have any questions or need assistance, please don't hesitate to contact t
 Welcome aboard!
 
 Best regards,  
-**PrimeLand Hotel Management Team**
+**Umoja Lutheran Hostel Management Team**
 
 ---
 
-**PrimeLand Hotel**  
-Mobile/WhatsApp: 0677-155-156 / +255 677-155-157  
-Email: info@primelandhotel.co.tz / infoprimelandhotel@gmail.com
+**Umoja Lutheran Hostel**  
+Email: info@umojalutheranhostel.co.tz
 
-© {{ date('Y') }} PrimeLand Hotel. All rights reserved.
+© {{ date('Y') }} Umoja Lutheran Hostel. All rights reserved.
 </x-mail::message>
 
 

@@ -15,7 +15,7 @@
         .container {
             max-width: 400px;
             margin: 0 auto;
-            border: 1px dashed #000;
+            border: 1px dashed #940000;
             padding: 15px;
         }
         .header {
@@ -26,6 +26,7 @@
             margin: 5px 0;
             font-size: 16px;
             text-transform: uppercase;
+            color: #940000;
         }
         .header p {
             margin: 2px 0;
@@ -84,7 +85,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h2>Umoj Lutheran Hostel</h2>
+            <h2>Umoja Lutheran Hostel</h2>
             <p>Sokoine Road - Moshi</p>
             <p>Tel: 0677-155-156</p>
             <h3>SERVICE DOCKET / BILL</h3>
@@ -215,7 +216,7 @@
             <p style="margin-bottom: 30px; margin-top: 20px;">Receptionist: {{ auth()->user()->name ?? 'Staff' }}</p>
             <div class="signature-line" style="margin-top: 30px;"></div>
             
-            <p style="font-size: 10px; margin-top: 15px;">Thank you for visiting Umoj Lutheran Hostel!</p>
+            <p style="font-size: 10px; margin-top: 15px;">Thank you for visiting Umoja Lutheran Hostel!</p>
             <p style="font-size: 10px; margin-top: 5px; color: #940000;">Powered By EmCa Techonologies</p>
         </div>
     </div>

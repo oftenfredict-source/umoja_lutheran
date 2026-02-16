@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <meta name="description" content="Umoj Lutheran Hostel Management System">
+    <meta name="description" content="Umoja Lutheran Hostel Management System">
     <title>{{ config('app.name') }} - {{ $role ?? 'Dashboard' }}</title>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -31,6 +31,19 @@
       
       .app-header {
         background-color: var(--primary-color) !important;
+      }
+      
+      .app-header__logo {
+        background-color: #ffffff !important;
+        color: var(--primary-color) !important;
+        font-weight: 700 !important;
+        transition: all 0.3s ease;
+      }
+
+      .app-header__logo:hover {
+        background-color: #f8f9fa !important;
+        color: #7b0000 !important;
+        text-decoration: none !important;
       }
       
       .app-sidebar {
@@ -248,9 +261,10 @@
         min-width: 300px;
       }
       
-      /* Ensure only one notification is visible */
-      #toast-container .toast-notification:not(:first-child) {
-        display: none;
+      /* Allow multiple toasts to stack */
+      #toast-container .toast-notification {
+        margin-bottom: 10px;
+        position: relative;
       }
       
       .toast-notification.toast-primary { border-left-color: #007bff; }
@@ -358,7 +372,8 @@
         }
         
         .app-header__logo {
-          color: #ffffff !important;
+          color: var(--primary-color) !important;
+          background-color: #ffffff !important;
           text-align: center !important;
           flex: 1 !important; /* Allow shrinking if needed */
           font-size: 18px !important; /* Smaller logo font */
@@ -430,6 +445,8 @@
             <div class="loading-progress-bar"></div>
         </div>
     </div>
+    <!-- Toast Container for notifications -->
+    <div id="toast-container"></div>
     <!-- Navbar-->
     <header class="app-header">
       @php
@@ -484,7 +501,7 @@
           $logoRoute = route('reception.dashboard');
         }
       @endphp
-      <a class="app-header__logo" href="{{ $logoRoute }}" style="text-decoration: none; color: #ffffff; font-size: 20px; font-weight: 700; letter-spacing: 1px; text-shadow: 0 1px 2px rgba(0,0,0,0.1);">
+      <a class="app-header__logo" href="{{ $logoRoute }}">
         Umoja Lutheran
       </a>
       <!-- Sidebar toggle button-->
@@ -936,55 +953,56 @@
             if (callback) callback(result);
         });
     }
+
+    // Professional Toast Configuration using SweetAlert2 Mixin
+    const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true,
+        didOpen: (toast) => {
+            toast.addEventListener('mouseenter', Swal.stopTimer)
+            toast.addEventListener('mouseleave', Swal.resumeTimer)
+        }
+    });
+
+    /**
+     * Global Toast Notification Function
+     * @param {string} type - 'success', 'error', 'warning', 'info'
+     * @param {string} message - The message body
+     * @param {string} title - Optional title
+     * @param {number} duration - Optional duration in ms
+     */
+    function showToast(type, message, title = '', duration = 3000) {
+        Toast.fire({
+            icon: type,
+            title: title || (type.charAt(0).toUpperCase() + type.slice(1) + '!'),
+            text: message,
+            timer: duration
+        });
+    }
     </script>
     <!-- The javascript plugin to display page loading on top-->
     <script src="{{ asset('dashboard_assets/js/plugins/pace.min.js') }}"></script>
     
     <!-- SweetAlert2 - Auto Display Session Messages -->
     <script>
-      // Auto-display session messages with SweetAlert2
+      // Auto-display session messages with Tosts or SweetAlert2
       @if(session('success'))
-        Swal.fire({
-          icon: 'success',
-          title: 'Success!',
-          text: '{{ session('success') }}',
-          confirmButtonColor: '#940000',
-          confirmButtonText: 'OK',
-          timer: 3000,
-          timerProgressBar: true
-        });
+        showToast('success', '{{ session('success') }}');
       @endif
 
       @if(session('error'))
-        Swal.fire({
-          icon: 'error',
-          title: 'Error!',
-          text: '{{ session('error') }}',
-          confirmButtonColor: '#940000',
-          confirmButtonText: 'OK'
-        });
+        showToast('error', '{{ session('error') }}');
       @endif
 
       @if(session('warning'))
-        Swal.fire({
-          icon: 'warning',
-          title: 'Warning!',
-          text: '{{ session('warning') }}',
-          confirmButtonColor: '#940000',
-          confirmButtonText: 'OK'
-        });
+        showToast('warning', '{{ session('warning') }}');
       @endif
 
       @if(session('info'))
-        Swal.fire({
-          icon: 'info',
-          title: 'Information',
-          text: '{{ session('info') }}',
-          confirmButtonColor: '#940000',
-          confirmButtonText: 'OK',
-          timer: 3000,
-          timerProgressBar: true
-        });
+        showToast('info', '{{ session('info') }}');
       @endif
 
       @if(isset($errors) && $errors->any())
@@ -1167,6 +1185,8 @@
         }
       }
 
+      }
+
       // Toast Notification System for Action Required Notifications
       // Load previously shown notification IDs from localStorage
       const storedShownIds = localStorage.getItem('shownToastNotificationIds');
@@ -1237,16 +1257,6 @@
       }
       
       function showNextNotification() {
-        // Clear any existing timer
-        if (currentNotificationTimer) {
-          clearTimeout(currentNotificationTimer);
-          currentNotificationTimer = null;
-        }
-        
-        // Remove current notification if exists
-        const container = document.getElementById('toast-container');
-        container.innerHTML = '';
-        
         // Check if there are more notifications
         if (notificationQueue.length === 0) {
           isShowingNotification = false;
@@ -1265,44 +1275,16 @@
         shownToastIds.add(notification.id);
         saveShownToastIds(); // Save to localStorage
         
-        const toast = document.createElement('div');
-        toast.className = `toast-notification toast-${notification.color || 'info'}`;
-        toast.id = `toast-${notification.id}`;
-        
-        const iconMap = {
-          'primary': 'fa-info-circle',
-          'success': 'fa-check-circle',
-          'danger': 'fa-exclamation-circle',
-          'warning': 'fa-exclamation-triangle',
-          'info': 'fa-info-circle'
-        };
-        
-        const icon = iconMap[notification.color] || 'fa-info-circle';
-        const actionButton = notification.link ? `<a href="${notification.link}" class="btn btn-sm btn-primary">View</a>` : '';
-        
-        toast.innerHTML = `
-          <i class="fa ${icon} toast-icon"></i>
-          <div class="toast-content">
-            <div class="toast-title">${notification.title || 'Notification'}</div>
-            <div class="toast-message">${notification.message}</div>
-            ${actionButton ? `<div class="toast-actions">${actionButton}</div>` : ''}
-          </div>
-          <button class="toast-close" onclick="dismissCurrentNotification()" title="Dismiss">&times;</button>
-        `;
-        
-        container.appendChild(toast);
-        
-        // Mark as read when clicked (already marked above, but keep for link clicks)
-        if (notification.link) {
-          toast.querySelector('.toast-actions a').addEventListener('click', function() {
-            markNotificationAsRead(notification.id);
-          });
-        }
-        
-        // Auto-advance to next notification after 5 seconds
-        currentNotificationTimer = setTimeout(function() {
-          dismissCurrentNotification();
-        }, 5000);
+        // Use the professional Toast system
+        showToast(
+          notification.color || 'info', 
+          notification.message, 
+          notification.title || 'New Notification',
+          5000 // Actionable notifications stay longer
+        );
+
+        // Schedule next notification in the queue
+        setTimeout(showNextNotification, 6000);
       }
       
       function dismissCurrentNotification() {

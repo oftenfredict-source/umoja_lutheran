@@ -9,23 +9,7 @@
     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
 }
 
-.receipt-report-container::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) rotate(-45deg);
-    width: 500px;
-    height: 500px;
-    background-image: url('{{ asset('royal-master/image/logo/Logo.png') }}');
-    background-repeat: no-repeat;
-    background-position: center;
-    background-size: contain;
-    opacity: 0.12;
-    z-index: 0;
-    pointer-events: none;
-    filter: grayscale(100%) brightness(1.2);
-}
+/* .receipt-report-container::before removed */
 
 .receipt-report-container > * {
     position: relative;
@@ -34,24 +18,15 @@
 
 .receipt-report-header {
     text-align: center;
-    border-bottom: 3px solid #e07632;
+    border-bottom: 3px solid #940000;
     padding-bottom: 20px;
     margin-bottom: 30px;
 }
 
-.receipt-report-header .logo-container {
-    margin-bottom: 15px;
-}
-
-.receipt-report-header .logo-container img {
-    max-height: 80px;
-    max-width: 300px;
-    height: auto;
-    width: auto;
-}
+/* .receipt-report-header .logo-container removed */
 
 .receipt-report-header h1 {
-    color: #e07632;
+    color: #940000;
     font-size: 28px;
     margin-bottom: 5px;
     font-weight: bold;
@@ -84,7 +59,7 @@
 }
 
 .print-button-section button {
-    background-color: #e07632;
+    background-color: #940000;
     color: #fff;
     border: none;
     padding: 12px 30px;
@@ -96,7 +71,7 @@
 }
 
 .print-button-section button:hover {
-    background-color: #c86528;
+    background-color: #7b0000;
 }
 
 .receipt-info-section {
@@ -104,9 +79,9 @@
 }
 
 .receipt-info-section h3 {
-    color: #e07632;
+    color: #940000;
     font-size: 14px;
-    border-bottom: 2px solid #e07632;
+    border-bottom: 2px solid #940000;
     padding-bottom: 8px;
     margin-bottom: 15px;
     font-weight: bold;
@@ -199,7 +174,7 @@
 
 .amount-highlight {
     font-size: 20px;
-    color: #e07632;
+    color: #940000;
     font-weight: bold;
 }
 

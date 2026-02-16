@@ -45,6 +45,18 @@
             <div class="invalid-feedback">{{ $message }}</div>
             @enderror
           </div>
+
+          <div class="form-group">
+            <label for="phone">Phone Number <span class="text-danger">*</span></label>
+            <input type="text" name="phone" id="phone" 
+                   class="form-control @error('phone') is-invalid @enderror" 
+                   value="{{ old('phone', $user->phone ?? '+255') }}" 
+                   placeholder="+255 7XX XXX XXX" required>
+            @error('phone')
+            <div class="invalid-feedback">{{ $message }}</div>
+            @enderror
+            <small class="form-text text-muted">For staff, credentials will be sent to this number via SMS.</small>
+          </div>
           
           <div class="form-group">
             <label for="role">Role <span class="text-danger">*</span></label>

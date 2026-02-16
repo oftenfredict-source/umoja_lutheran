@@ -17,15 +17,15 @@
     <div class="tile">
       <div class="tile-body">
         <!-- Hotel Header -->
-        <div class="text-center mb-4" style="border-bottom: 3px solid #e07632; padding-bottom: 20px;">
-          <h2 style="color: #e07632; margin-bottom: 5px;">Umoj Lutheran Hostel</h2>
+        <div class="text-center mb-4" style="border-bottom: 3px solid #940000; padding-bottom: 20px;">
+          <h2 style="color: #940000; margin-bottom: 5px;">Umoja Lutheran Hostel</h2>
           <p style="color: #666; margin: 0;">Checkout Bill</p>
         </div>
 
         <!-- Guest Information -->
         <div class="row mb-4">
           <div class="col-md-6">
-            <h5 style="color: #e07632; border-bottom: 2px solid #e07632; padding-bottom: 10px; margin-bottom: 15px;">Guest Information</h5>
+            <h5 style="color: #940000; border-bottom: 2px solid #940000; padding-bottom: 10px; margin-bottom: 15px;">Guest Information</h5>
             <table class="table table-borderless">
               <tr>
                 <td><strong>Name:</strong></td>
@@ -58,7 +58,7 @@
             </table>
           </div>
           <div class="col-md-6">
-            <h5 style="color: #e07632; border-bottom: 2px solid #e07632; padding-bottom: 10px; margin-bottom: 15px;">Booking Details</h5>
+            <h5 style="color: #940000; border-bottom: 2px solid #940000; padding-bottom: 10px; margin-bottom: 15px;">Booking Details</h5>
             <table class="table table-borderless">
               <tr>
                 <td><strong>Room:</strong></td>
@@ -149,10 +149,10 @@
           $displayTotalBillTsh = $displayRoomPriceTsh + $displayExtensionTsh + $displayTotalServiceTsh;
         @endphp
         <div class="mb-4">
-          <h5 style="color: #e07632; border-bottom: 2px solid #e07632; padding-bottom: 10px; margin-bottom: 15px;">Bill Breakdown (Paid by Company)</h5>
+          <h5 style="color: #940000; border-bottom: 2px solid #940000; padding-bottom: 10px; margin-bottom: 15px;">Bill Breakdown (Paid by Company)</h5>
           <div class="row">
             <div class="col-md-8 offset-md-4">
-              <div style="background-color: #f8f9fa; padding: 20px; border: 2px solid #e07632;">
+              <div style="background-color: #f8f9fa; padding: 20px; border: 2px solid #940000;">
                 <table class="table table-borderless mb-0">
                   <tr>
                     <td><strong>Room Charges ({{ $displayOriginalNights }} night(s)):</strong></td>
@@ -179,7 +179,7 @@
                     </td>
                   </tr>
                   @endif
-                  <tr style="border-top: 2px solid #e07632;">
+                  <tr style="border-top: 2px solid #940000;">
                     <td><strong>Total Bill:</strong></td>
                     <td class="text-right">
                       <strong>{{ number_format($displayTotalBillTsh, 2) }} TZS</strong>
@@ -222,10 +222,10 @@
           $displayTotalBillTsh = $displayCompanyBillTsh + $displayGuestServiceTsh;
         @endphp
         <div class="mb-4">
-          <h5 style="color: #e07632; border-bottom: 2px solid #e07632; padding-bottom: 10px; margin-bottom: 15px;">Bill Breakdown</h5>
+          <h5 style="color: #940000; border-bottom: 2px solid #940000; padding-bottom: 10px; margin-bottom: 15px;">Bill Breakdown</h5>
           <div class="row">
             <div class="col-md-8 offset-md-4">
-              <div style="background-color: #f8f9fa; padding: 20px; border: 2px solid #e07632;">
+              <div style="background-color: #f8f9fa; padding: 20px; border: 2px solid #940000;">
                 <table class="table table-borderless mb-0">
                   <tr>
                     <td><strong>Room Charges ({{ $displayOriginalNights }} night(s)):</strong></td>
@@ -252,7 +252,7 @@
                     </td>
                   </tr>
                   @endif
-                  <tr style="border-top: 2px solid #e07632;">
+                  <tr style="border-top: 2px solid #940000;">
                     <td><strong>Total Bill:</strong></td>
                     <td class="text-right">
                       <strong>{{ number_format($displayTotalBillTsh, 2) }} TZS</strong>
@@ -268,7 +268,7 @@
                   <tr>
                     <td><strong>Guest Portion:</strong></td>
                     <td class="text-right">
-                      <strong style="color: {{ $displayGuestServiceTsh > 0 ? '#e07632' : '#28a745' }};">{{ number_format($displayGuestServiceTsh, 2) }} TZS</strong>
+                      <strong style="color: {{ $displayGuestServiceTsh > 0 ? '#940000' : '#28a745' }};">{{ number_format($displayGuestServiceTsh, 2) }} TZS</strong>
                       @if($displayGuestServiceTsh > 0)
                         <br><small class="text-warning"><i class="fa fa-user"></i> Self-Paid Services</small>
                       @else
@@ -320,7 +320,7 @@
         @elseif(!($isGuestWithSelfPaidServices ?? false) && !($isStaffViewingCorporate ?? false) && !($isStaffViewingSelfPaid ?? false) && !($isStaffViewingCompanyPaid ?? false))
         <!-- Room Charges (Only for Individual Bookings) -->
         <div class="mb-4">
-          <h5 style="color: #e07632; border-bottom: 2px solid #e07632; padding-bottom: 10px; margin-bottom: 15px;">Room Charges</h5>
+          <h5 style="color: #940000; border-bottom: 2px solid #940000; padding-bottom: 10px; margin-bottom: 15px;">Room Charges</h5>
           <div class="table-responsive">
             <table class="table table-bordered">
               <thead>
@@ -364,7 +364,7 @@
         @endphp
         @if($displayServiceRequests->count() > 0)
         <div class="mb-4">
-          <h5 style="color: #e07632; border-bottom: 2px solid #e07632; padding-bottom: 10px; margin-bottom: 15px;">Service Charges</h5>
+          <h5 style="color: #940000; border-bottom: 2px solid #940000; padding-bottom: 10px; margin-bottom: 15px;">Service Charges</h5>
           <div class="table-responsive">
             <table class="table table-bordered">
               <thead>
@@ -430,7 +430,7 @@
         </div>
         @else
         <div class="mb-4">
-          <h5 style="color: #e07632; border-bottom: 2px solid #e07632; padding-bottom: 10px; margin-bottom: 15px;">Service Charges</h5>
+          <h5 style="color: #940000; border-bottom: 2px solid #940000; padding-bottom: 10px; margin-bottom: 15px;">Service Charges</h5>
           @if($isGuestWithSelfPaidServices ?? false)
             <p class="text-muted">No self-paid services used during stay.</p>
             @if($booking->company)
@@ -457,7 +457,7 @@
         @if(!$isCorporateCompanyPaid)
         <div class="row mb-4">
           <div class="col-md-8 offset-md-4">
-            <div style="background-color: #f8f9fa; padding: 20px; border: 2px solid #e07632;">
+            <div style="background-color: #f8f9fa; padding: 20px; border: 2px solid #940000;">
               <table class="table table-borderless mb-0">
                 @if(!$isCorporateSelfPaid && !($isStaffViewingCorporate ?? false))
                 <tr>
@@ -493,7 +493,7 @@
                   <td class="text-right"><strong>{{ number_format($totalServiceChargesTsh ?? 0, 2) }} TZS</strong></td>
                 </tr>
                 @endif
-                <tr style="border-top: 2px solid #e07632;">
+                <tr style="border-top: 2px solid #940000;">
                   <td><strong>{{ $isCorporateSelfPaid ? 'Total Bill (Guest Portion):' : (($isStaffViewingCorporate ?? false) ? 'Total Bill (Guest Portion):' : 'Total Bill:') }}</strong></td>
                   <td class="text-right">
                     <strong>{{ number_format($totalBillTsh ?? 0, 2) }} TZS</strong>
@@ -508,14 +508,14 @@
                 </tr>
                 @endif
                 @if(isset($outstandingBalanceTsh) && $outstandingBalanceTsh > 50)
-                <tr style="border-top: 2px solid #e07632; font-size: 18px;">
+                <tr style="border-top: 2px solid #940000; font-size: 18px;">
                   <td><strong>Outstanding Balance:</strong></td>
                   <td class="text-right">
-                    <strong style="color: #e07632; font-size: 24px;">{{ number_format($outstandingBalanceTsh, 2) }} TZS</strong>
+                    <strong style="color: #940000; font-size: 24px;">{{ number_format($outstandingBalanceTsh, 2) }} TZS</strong>
                   </td>
                 </tr>
                 @elseif(isset($outstandingBalanceTsh) && $outstandingBalanceTsh <= 50)
-                <tr style="border-top: 2px solid #e07632; font-size: 18px;">
+                <tr style="border-top: 2px solid #940000; font-size: 18px;">
                   <td><strong>Status:</strong></td>
                   <td class="text-right">
                     <span class="badge badge-success" style="font-size: 16px;">All Paid</span>
@@ -531,7 +531,7 @@
         <!-- Payment Information -->
         @if(!$isCorporateCompanyPaid)
         <div class="mb-4">
-          <h5 style="color: #e07632; border-bottom: 2px solid #e07632; padding-bottom: 10px; margin-bottom: 15px;">Payment Information</h5>
+          <h5 style="color: #940000; border-bottom: 2px solid #940000; padding-bottom: 10px; margin-bottom: 15px;">Payment Information</h5>
           <table class="table table-borderless">
             <tr>
               <td><strong>Payment Status:</strong></td>
@@ -645,9 +645,9 @@
         @endif
 
         <!-- Footer -->
-        <div class="text-center mt-4" style="border-top: 2px solid #e07632; padding-top: 20px;">
+        <div class="text-center mt-4" style="border-top: 2px solid #940000; padding-top: 20px;">
           <p style="color: #666; margin: 0;">
-            <strong>Thank you for staying with Umoj Lutheran Hostel!</strong><br>
+            <strong>Thank you for staying with Umoja Lutheran Hostel!</strong><br>
             We hope to see you again soon.
           </p>
           <p style="color: #999; font-size: 12px; margin-top: 10px;">

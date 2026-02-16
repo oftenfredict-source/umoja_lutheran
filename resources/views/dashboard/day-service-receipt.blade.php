@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Service Receipt - {{ $dayService->service_reference }} - Umoj Lutheran Hostel</title>
+    <title>Service Receipt - {{ $dayService->service_reference }} - Umoja Lutheran Hostel</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
     <style>
         @media print {
@@ -50,23 +50,7 @@
             position: relative;
         }
         
-        .receipt-container::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) rotate(-45deg);
-            width: 500px;
-            height: 500px;
-            background-image: url('{{ asset('royal-master/image/logo/Logo.png') }}');
-            background-repeat: no-repeat;
-            background-position: center;
-            background-size: contain;
-            opacity: 0.12;
-            z-index: 0;
-            pointer-events: none;
-            filter: grayscale(100%) brightness(1.2);
-        }
+        /* .receipt-container::before removed */
         
         .receipt-container > * {
             position: relative;
@@ -83,7 +67,7 @@
         
         .header {
             text-align: center;
-            border-bottom: 3px solid #e07632;
+            border-bottom: 3px solid #940000;
             padding-bottom: 20px;
             margin-bottom: 30px;
         }
@@ -98,7 +82,7 @@
         }
         
         .header h1 {
-            color: #e07632;
+            color: #940000;
             font-size: 28px;
             margin-bottom: 5px;
             font-weight: bold;
@@ -124,7 +108,7 @@
         }
         
         .receipt-info .info-block h3 {
-            color: #e07632;
+            color: #940000;
             font-size: 14px;
             margin-bottom: 10px;
             border-bottom: 1px solid #ddd;
@@ -163,7 +147,7 @@
         .total-section {
             margin-top: 20px;
             padding-top: 20px;
-            border-top: 2px solid #e07632;
+            border-top: 2px solid #940000;
         }
         
         .total-row {
@@ -176,7 +160,7 @@
         .total-row.total {
             font-size: 16px;
             font-weight: bold;
-            color: #e07632;
+            color: #940000;
             margin-top: 10px;
             padding-top: 10px;
             border-top: 1px solid #ddd;
@@ -185,7 +169,7 @@
         .footer {
             margin-top: 40px;
             padding-top: 20px;
-            border-top: 2px solid #e07632;
+            border-top: 2px solid #940000;
             text-align: center;
         }
         
@@ -238,13 +222,13 @@
 <body>
     <div class="receipt-container">
         <div class="header">
-            <div class="logo-container">
-                <img src="{{ asset('royal-master/image/logo/Logo.png') }}" alt="Umoj Lutheran Hostel Logo">
-            </div>
-            <h1>Umoj Lutheran Hostel</h1>
+            {{-- <div class="logo-container">
+                <img src="{{ asset('royal-master/image/logo/Logo.png') }}" alt="Umoja Lutheran Hostel Logo">
+            </div> --}}
+            <h1>Umoja Lutheran Hostel</h1>
             <p>Sokoine Road - Moshi Kilimanjaro - Tanzania</p>
             <p>Phone: 0677-155-156 / +255 677-155-157</p>
-            <p>Email: info@Umoj Lutheran Hostelhotel.co.tz | infoUmoj Lutheran Hostelhotel@gmail.com</p>
+            <p>Email: info@Umoja Lutheran Hostelhotel.co.tz | infoUmoja Lutheran Hostelhotel@gmail.com</p>
         </div>
         
         <div class="receipt-info">
@@ -373,7 +357,7 @@
         <table class="details-table">
             <thead>
                 <tr>
-                    <th colspan="4" style="background-color: #e07632; color: white; text-align: center;">Bar & Restaurant Consumption</th>
+                    <th colspan="4" style="background-color: #940000; color: white; text-align: center;">Bar & Restaurant Consumption</th>
                 </tr>
                 <tr>
                     <th>Item</th>
@@ -550,7 +534,7 @@
         </div>
         
         <div class="footer">
-            <p>Thank you for choosing Umoj Lutheran Hostel!</p>
+            <p>Thank you for choosing Umoja Lutheran Hostel!</p>
             <p>For inquiries, please contact us at the information above.</p>
             <p class="powered-by">Powered By EmCa Techonologies</p>
         </div>

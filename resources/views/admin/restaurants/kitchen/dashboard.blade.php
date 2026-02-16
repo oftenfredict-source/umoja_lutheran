@@ -72,9 +72,9 @@
     <div class="tile">
       <div class="tile-title-w-btn">
         <h3 class="title">Live Food Orders</h3>
-        @if(!$isChef)
+        {{-- @if(!$isChef)
         <button class="btn btn-primary" onclick="openWalkInModal()"><i class="fa fa-plus"></i> New Walk-in Order</button>
-        @endif
+        @endif --}}
       </div>
       
       @if($pendingOrders->count() > 0)
@@ -201,11 +201,11 @@
                       <i class="fa fa-print"></i> Print Bill
                     </button>
                     
-                    @if($first->is_walk_in && $first->payment_status === 'pending' && !$isChef)
+                    {{-- @if($first->is_walk_in && $first->payment_status === 'pending' && !$isChef)
                         <button class="btn btn-sm btn-warning mb-1" onclick="openWalkInModal(null, '{{ addslashes($first->walk_in_name) }}')" title="Add More Items">
                           <i class="fa fa-plus"></i> Add Items
                         </button>
-                    @endif
+                    @endif --}}
 
                     @if($first->payment_status === 'pending')
                         <button class="btn btn-sm btn-outline-success mb-1" onclick="openPaymentModal({{ $first->id }}, {{ $guestTotal }}, '{{ addslashes($first->walk_in_name ?? $first->booking->room->room_number ?? '') }}', {{ $first->is_walk_in ? 1 : 0 }})" title="Record Total Payment">
@@ -270,11 +270,11 @@
                                         ->sum('total_price_tsh');
                                 @endphp
                                 <div class="btn-group">
-                                    @if(!$isChef)
+                                    {{-- @if(!$isChef)
                                     <button class="btn btn-primary btn-sm rounded-pill px-3" onclick="openWalkInModal(null, '{{ $ceremony->guest_name }}', {{ $ceremony->id }})">
                                         <i class="fa fa-plus-circle mr-1"></i> Add Usage
                                     </button>
-                                    @endif
+                                    @endif --}}
                                     <a href="{{ route('chef-master.day-services.docket', $ceremony->id) }}" target="_blank" class="btn btn-secondary btn-sm rounded-pill px-3 ml-2" title="Print Docket">
                                         <i class="fa fa-print mr-1"></i> Print Docket
                                     </a>

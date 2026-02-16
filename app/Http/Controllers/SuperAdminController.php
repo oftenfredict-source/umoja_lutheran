@@ -21,6 +21,7 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Mail;
+use App\Services\SmsService;
 use Carbon\Carbon;
 
 class SuperAdminController extends Controller
@@ -386,12 +387,13 @@ class SuperAdminController extends Controller
     /**
      * Store new user
      */
-    public function storeUser(Request $request)
+    public function storeUser(Request $request, SmsService $smsService)
     {
         // Validation rules - password is optional for staff (will be auto-generated)
         $rules = [
             'name' => 'required|string|max:255',
             'email' => 'required|email',
+            'phone' => 'required|string|max:20',
             'role' => 'required|string|in:super_admin,manager,reception,guest,bar_keeper,head_chef,housekeeper,waiter',
             'is_active' => 'boolean',
         ];
@@ -427,6 +429,7 @@ class SuperAdminController extends Controller
             $user = Staff::create([
                 'name' => $validated['name'],
                 'email' => $validated['email'],
+                'phone' => $validated['phone'],
                 'password' => Hash::make($password),
                 'role' => $validated['role'],
                 'is_active' => $request->has('is_active') ? $validated['is_active'] : true,
@@ -448,10 +451,37 @@ class SuperAdminController extends Controller
                 ]);
                 // Don't fail the user creation if email fails
             }
+
+            // Send welcome SMS to staff with credentials
+            try {
+                $roleName = ucwords(str_replace('_', ' ', $user->role));
+                $smsMessage = "Hello {$user->name}, your Umoja Lutheran account has been created as {$roleName}. Username: {$user->email}, Password: {$defaultPassword}. Change your password upon login.";
+                $smsResult = $smsService->sendSms($user->phone, $smsMessage);
+                
+                if ($smsResult['success']) {
+                    Log::info('Staff welcome SMS sent', [
+                        'user_id' => $user->id,
+                        'phone' => $user->phone,
+                    ]);
+                } else {
+                    Log::warning('Failed to send staff welcome SMS', [
+                        'user_id' => $user->id,
+                        'phone' => $user->phone,
+                        'error' => $smsResult['error'] ?? 'Unknown error',
+                        'response' => $smsResult['response'] ?? null,
+                    ]);
+                }
+            } catch (\Exception $e) {
+                Log::error('SMS sending exception', [
+                    'user_id' => $user->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         } else {
             $user = Guest::create([
                 'name' => $validated['name'],
                 'email' => $validated['email'],
+                'phone' => $validated['phone'], // Support phone for guests too
                 'password' => Hash::make($password),
                 'is_active' => $request->has('is_active') ? $validated['is_active'] : true,
             ]);
@@ -479,10 +509,11 @@ class SuperAdminController extends Controller
         SystemLog::log('info', "User created: {$user->name} ({$user->email})", 'user_management', [
             'user_id' => $user->id, 
             'role' => $role,
-            'email_sent' => in_array($role, ['super_admin', 'manager', 'reception', 'bar_keeper', 'head_chef', 'housekeeper', 'waiter']),
+            'email_sent' => true,
+            'sms_sent' => in_array($role, ['super_admin', 'manager', 'reception', 'bar_keeper', 'head_chef', 'housekeeper', 'waiter']),
         ]);
         
-        return redirect()->route('super_admin.users')->with('success', 'User created successfully. Welcome email sent with credentials.');
+        return redirect()->route('super_admin.users')->with('success', 'User created successfully. Welcome credentials have been sent.');
     }
     
     /**
@@ -548,6 +579,7 @@ class SuperAdminController extends Controller
         // Build validation rules
         $rules = [
             'name' => 'required|string|max:255',
+            'phone' => 'required|string|max:20',
             'password' => 'nullable|string|min:8',
             'is_active' => 'boolean',
         ];
@@ -567,13 +599,14 @@ class SuperAdminController extends Controller
         
         $validated = $request->validate($rules);
         
-        $oldValues = $user->only(['name', 'email', 'is_active']);
+        $oldValues = $user->only(['name', 'email', 'phone', 'is_active']);
         if ($userType === 'staff') {
             $oldValues['role'] = $user->role;
         }
         
         $user->name = $validated['name'];
         $user->email = $validated['email'];
+        $user->phone = $validated['phone'];
         if ($userType === 'staff') {
             $user->role = $validated['role'];
         }
@@ -599,7 +632,7 @@ class SuperAdminController extends Controller
     /**
      * Auto-generate and reset user password
      */
-    public function resetPassword(Request $request, $id)
+    public function resetPassword(Request $request, $id, SmsService $smsService)
     {
         // CRITICAL FIX: Check BOTH tables and determine which one has the user
         // This handles ID collisions between Staff and Guest tables
@@ -787,25 +820,29 @@ class SuperAdminController extends Controller
         // Use original user data for description to ensure correct user is logged
         $logDescription = "Auto-generated and reset password for user: {$originalUserData['name']} ({$originalUserData['email']})";
         
-        \Log::info('Creating activity log', [
-            'user_id' => $userForLogging->id,
-            'user_name' => $userForLogging->name,
-            'user_email' => $userForLogging->email,
-            'log_description' => $logDescription,
-        ]);
-        
         ActivityLog::log('reset_password', $userForLogging, $logDescription, $oldValues, $newValues);
         
         SystemLog::log('warning', "Password auto-generated and reset for user: {$originalUserData['name']} ({$originalUserData['email']})", 'security', [
             'user_id' => $originalUserData['id'],
-            'user_email' => $originalUserData['email'], // Include email to help identify user in case of ID collision
-            'user_type' => $originalUserData['type'], // Include user type (staff/guest)
+            'user_email' => $originalUserData['email'], 
+            'user_type' => $originalUserData['type'], 
             'user_name' => $originalUserData['name'],
-            'new_password' => $newPassword, // Include the new password so admin can view it
+            'new_password' => $newPassword, 
             'action_by' => $authUser ? $authUser->id : null,
             'action_by_email' => $authUser ? $authUser->email : null,
             'action' => 'password_reset_by_admin',
         ]);
+        
+        // Send SMS to staff if applicable
+        if ($originalUserData['type'] === 'staff' && !empty($userForLogging->phone)) {
+            try {
+                $smsMessage = "Your Umoja Lutheran password has been reset by Admin. New Password: {$newPassword}. Please login and change it.";
+                $smsService->sendSms($userForLogging->phone, $smsMessage);
+                Log::info('Password reset SMS sent', ['user_id' => $userForLogging->id, 'phone' => $userForLogging->phone]);
+            } catch (\Exception $e) {
+                Log::error('Failed to send password reset SMS', ['user_id' => $userForLogging->id, 'error' => $e->getMessage()]);
+            }
+        }
         
         // If AJAX request, return JSON
         if ($request->expectsJson() || $request->ajax() || $request->wantsJson()) {

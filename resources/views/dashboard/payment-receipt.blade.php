@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Official Receipt - {{ $booking->booking_reference }} - Umoj Lutheran Hostel</title>
+    <title>Official Receipt - {{ $booking->booking_reference }} - Umoja Lutheran Hostel</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #e07632;
-            --primary-dark: #c86528;
+            --primary: #940000;
+            --primary-dark: #7b0000;
             --secondary: #17a2b8;
             --success: #28a745;
             --danger: #dc3545;
@@ -405,22 +405,22 @@
     </div>
 
     <div class="receipt-container">
-        <div class="watermark">
-            Umoj Lutheran Hostel
+        {{-- <div class="watermark">
+            Umoja Lutheran Hostel
             <span class="watermark-subtitle">Comfort in every Stay</span>
         </div>
-        <img src="{{ asset('royal-master/image/Umoj Lutheran Hostel_stamp.png') }}" alt="Hotel Stamp" class="hotel-stamp">
+        <img src="{{ asset('royal-master/image/Umoja Lutheran Hostel_stamp.png') }}" alt="Hotel Stamp" class="hotel-stamp"> --}}
         @if($balanceBase < 0.0001) <div class="status-stamp">PAID</div> @endif
 
         <div class="header">
             <div class="hotel-info">
-                <div class="logo-container">
+                {{-- <div class="logo-container">
                     <img src="{{ asset('royal-master/image/logo/Logo.png') }}" alt="Logo">
-                </div>
-                <h1>Umoj Lutheran Hostel</h1>
+                </div> --}}
+                <h1>Umoja Lutheran Hostel</h1>
                 <p><i class="fa fa-map-marker"></i> Moshi-Kilimanjaro, Tanzania</p>
                 <p><i class="fa fa-phone"></i> +255 677 155 156 / 157</p>
-                <p><i class="fa fa-envelope"></i> info@Umoj Lutheran Hostelhotel.co.tz</p>
+                <p><i class="fa fa-envelope"></i> info@Umoja Lutheran Hostelhotel.co.tz</p>
             </div>
             <div class="receipt-meta">
                 <h2>RECEIPT</h2>
@@ -599,13 +599,13 @@
             <!-- Signature Section -->
             <div class="signature-area">
                 <div class="sig-line">Authorized Signatory</div>
-                <p style="font-size: 10px; color: grey; margin-top: 5px;">Umoj Lutheran Hostel Management</p>
+                <p style="font-size: 10px; color: grey; margin-top: 5px;">Umoja Lutheran Hostel Management</p>
                 <p style="font-size: 9px; color: #cbd5e1; margin-top: 20px;">Receipt Generated: {{ now()->format('Y-m-d H:i') }}</p>
             </div>
         </div>
 
         <div style="text-align: center; margin-top: 40px; border-top: 1px dashed #eee; padding-top: 20px;">
-            <p style="font-size: 13px; font-weight: 600; color: var(--primary);">Thank you for choosing Umoj Lutheran Hostel!</p>
+            <p style="font-size: 13px; font-weight: 600; color: var(--primary);">Thank you for choosing Umoja Lutheran Hostel!</p>
             <p style="font-size: 10px; color: #94a3b8; margin-top: 5px;">System Developed By <span style="color: #940000; font-weight: 700;">EmCa Technologies</span></p>
         </div>
     </div>

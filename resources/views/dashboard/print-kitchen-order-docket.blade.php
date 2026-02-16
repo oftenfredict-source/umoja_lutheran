@@ -19,21 +19,21 @@
             position: relative;
         }
         .docket {
-            border: 2px solid #e07632; /* Primary Color */
+            border: 2px solid #940000; /* Primary Color */
             padding: 15px;
             position: relative;
             background: #fff;
         }
         .header {
             text-align: center;
-            border-bottom: 2px dashed #e07632;
+            border-bottom: 2px dashed #940000;
             padding-bottom: 10px;
             margin-bottom: 15px;
         }
         .header h1 {
             font-size: 20px;
             margin-bottom: 5px;
-            color: #e07632;
+            color: #940000;
             text-transform: uppercase;
         }
         .header p {
@@ -43,7 +43,7 @@
         }
         .section {
             margin: 10px 0;
-            border-bottom: 1px dashed #e07632;
+            border-bottom: 1px dashed #940000;
             padding-bottom: 10px;
         }
         .section-title {
@@ -52,7 +52,7 @@
             margin-bottom: 8px;
             text-align: center;
             text-transform: uppercase;
-            color: #e07632;
+            color: #940000;
         }
         .info-row {
             display: flex;
@@ -74,7 +74,7 @@
         }
         .item-qty {
             font-size: 16px;
-            color: #e07632;
+            color: #940000;
             margin-right: 10px;
             font-weight: bold;
         }
@@ -92,16 +92,16 @@
             text-align: center;
             font-weight: bold;
             font-size: 16px;
-            border: 2px solid #e07632;
+            border: 2px solid #940000;
             background: #fff3e0;
             padding: 10px;
-            color: #e07632;
+            color: #940000;
         }
         .total-pay {
             font-size: 20px;
             margin-top: 5px;
             display: block;
-            border-top: 1px solid #e07632;
+            border-top: 1px solid #940000;
             padding-top: 5px;
         }
         .footer {
@@ -129,8 +129,8 @@
     <div class="docket">
         <!-- Header -->
         <div class="header">
-            <h1 style="font-size: 24px;">Umoj Lutheran Hostel</h1>
-            <p style="font-weight: bold; letter-spacing: 2px; color: #e07632;">
+            <h1 style="font-size: 24px;">Umoja Lutheran Hostel</h1>
+            <p style="font-weight: bold; letter-spacing: 2px; color: #940000;">
                 @if(in_array(($order->payment_status ?? 'pending'), ['paid', 'room_charge']))
                     GUEST BILL RECEIPT
                 @else
@@ -203,7 +203,7 @@
 
     <!-- Print Button -->
     <div class="no-print" style="text-align: center; margin-top: 20px;">
-        <button onclick="window.print()" style="padding: 12px 30px; font-size: 16px; background: #e07632; color: #fff; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+        <button onclick="window.print()" style="padding: 12px 30px; font-size: 16px; background: #940000; color: #fff; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
             <i class="fa fa-print"></i> Print Bill
         </button>
         <button onclick="window.close()" style="padding: 12px 30px; font-size: 16px; background: #6c757d; color: #fff; border: none; border-radius: 5px; cursor: pointer; margin-left: 10px; font-weight: bold;">

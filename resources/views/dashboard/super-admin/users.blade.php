@@ -199,6 +199,7 @@
                 <th>ID</th>
                 <th>Name</th>
                 <th>Email</th>
+                <th>Phone</th>
                 <th>Role</th>
                 <th>Status</th>
                 <th>Registered</th>
@@ -211,6 +212,7 @@
                 <td>{{ $user->id }}</td>
                 <td><strong>{{ $user->name }}</strong></td>
                 <td>{{ $user->email }}</td>
+                <td>{{ $user->phone ?? 'N/A' }}</td>
                 <td>
                   @if($activeTab === 'employees')
                     @php

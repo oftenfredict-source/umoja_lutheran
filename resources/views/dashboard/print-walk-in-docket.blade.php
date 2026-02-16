@@ -19,41 +19,26 @@
             position: relative;
         }
         .docket {
-            border: 2px solid #e77a31;
+            border: 2px solid #940000;
             padding: 20px;
             position: relative;
             background: #fff;
         }
-        .docket::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 650px;
-            height: 650px;
-            background-image: url('/dashboard_assets/images/Logo.png');
-            background-size: contain;
-            background-repeat: no-repeat;
-            background-position: center;
-            opacity: 0.05;
-            z-index: 0;
-            pointer-events: none;
-        }
+        /* .docket::before removed */
         .docket > * {
             position: relative;
             z-index: 1;
         }
         .header {
             text-align: center;
-            border-bottom: 2px dashed #e77a31;
+            border-bottom: 2px dashed #940000;
             padding-bottom: 15px;
             margin-bottom: 15px;
         }
         .header h1 {
             font-size: 24px;
             margin-bottom: 5px;
-            color: #e77a31;
+            color: #940000;
         }
         .header p {
             font-size: 12px;
@@ -67,7 +52,7 @@
             font-size: 14px;
             margin-bottom: 8px;
             text-decoration: underline;
-            color: #e77a31;
+            color: #940000;
         }
         .info-row {
             display: flex;
@@ -89,7 +74,7 @@
         th {
             background: #fff3e0;
             font-weight: bold;
-            color: #e77a31;
+            color: #940000;
         }
         .text-right {
             text-align: right;
@@ -98,7 +83,7 @@
             text-align: center;
         }
         .total-section {
-            border-top: 2px solid #e77a31;
+            border-top: 2px solid #940000;
             margin-top: 15px;
             padding-top: 10px;
         }
@@ -108,11 +93,11 @@
             font-size: 16px;
             font-weight: bold;
             margin: 5px 0;
-            color: #e77a31;
+            color: #940000;
         }
         .footer {
             margin-top: 20px;
-            border-top: 2px dashed #e77a31;
+            border-top: 2px dashed #940000;
             padding-top: 15px;
             text-align: center;
             font-size: 11px;
@@ -162,10 +147,10 @@
     <div class="docket">
         <!-- Header -->
         <div class="header">
-            <h1>Umoj Lutheran Hostel</h1>
+            <h1>Umoja Lutheran Hostel</h1>
             <p>Sokoine Road - Moshi, Kilimanjaro - Tanzania</p>
             <p>Mobile/WhatsApp: 0677-155-156 / +255 677-155-157</p>
-            <p>Email: info@Umoj Lutheran Hostelhotel.co.tz</p>
+            <p>Email: info@Umoja Lutheran Hostelhotel.co.tz</p>
         </div>
 
         <!-- Docket Info -->

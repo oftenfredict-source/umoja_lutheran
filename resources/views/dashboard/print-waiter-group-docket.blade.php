@@ -18,20 +18,20 @@
             background: #fff;
         }
         .docket {
-            border: 2px solid #e07632;
+            border: 2px solid #940000;
             padding: 15px;
             background: #fff;
         }
         .header {
             text-align: center;
-            border-bottom: 2px dashed #e07632;
+            border-bottom: 2px dashed #940000;
             padding-bottom: 10px;
             margin-bottom: 15px;
         }
         .header h1 {
             font-size: 20px;
             margin-bottom: 5px;
-            color: #e07632;
+            color: #940000;
             text-transform: uppercase;
         }
         .header p {
@@ -41,7 +41,7 @@
         }
         .section {
             margin: 10px 0;
-            border-bottom: 1px dashed #e07632;
+            border-bottom: 1px dashed #940000;
             padding-bottom: 10px;
         }
         .section-title {
@@ -50,7 +50,7 @@
             margin-bottom: 8px;
             text-align: center;
             text-transform: uppercase;
-            color: #e07632;
+            color: #940000;
         }
         .info-row {
             display: flex;
@@ -63,7 +63,7 @@
             font-size: 14px;
             padding: 8px;
             background: #f9f9f9;
-            border-left: 3px solid #e07632;
+            border-left: 3px solid #940000;
         }
         .item-header {
             display: flex;
@@ -72,7 +72,7 @@
             margin-bottom: 5px;
         }
         .item-qty {
-            color: #e07632;
+            color: #940000;
         }
         .item-note {
             font-size: 11px;
@@ -83,21 +83,21 @@
         .total-section {
             margin-top: 15px;
             padding-top: 10px;
-            border-top: 2px solid #e07632;
+            border-top: 2px solid #940000;
         }
         .total-row {
             display: flex;
             justify-content: space-between;
             font-size: 18px;
             font-weight: bold;
-            color: #e07632;
+            color: #940000;
             margin: 10px 0;
         }
         .footer {
             text-align: center;
             margin-top: 15px;
             padding-top: 10px;
-            border-top: 2px dashed #e07632;
+            border-top: 2px dashed #940000;
             font-size: 11px;
             color: #666;
         }
@@ -136,7 +136,7 @@
             <div class="watermark">PAID</div>
         @endif
         <div class="header">
-            <h1>🏨 Umoj Lutheran Hostel</h1>
+            <h1>🏨 Umoja Lutheran Hostel</h1>
             <p>Moshi, Kilimanjaro, Tanzania</p>
             <p>Tel: +255 XXX XXX XXX</p>
             <p style="margin-top: 10px; font-weight: bold; font-size: 13px;">GUEST BILL</p>
@@ -210,7 +210,7 @@
                             @if($status === 'PAID')
                                 <span style="font-size: 10px; color: green; border: 1px solid green; padding: 1px 3px; border-radius: 2px; margin-left: 5px;">PAID</span>
                             @else
-                                <span style="font-size: 10px; color: #e07632; border: 1px solid #e07632; padding: 1px 3px; border-radius: 2px; margin-left: 5px;">PENDING</span>
+                                <span style="font-size: 10px; color: #940000; border: 1px solid #940000; padding: 1px 3px; border-radius: 2px; margin-left: 5px;">PENDING</span>
                             @endif
                         </span>
                         <span>{{ number_format($total) }} TZS</span>
@@ -259,7 +259,7 @@
     </div>
 
     <div class="no-print" style="text-align: center; margin-top: 20px;">
-        <button onclick="window.print()" style="padding: 10px 20px; background: #e07632; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
+        <button onclick="window.print()" style="padding: 10px 20px; background: #940000; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
             🖨️ Print Bill
         </button>
         <button onclick="window.close()" style="padding: 10px 20px; background: #666; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; margin-left: 10px;">
