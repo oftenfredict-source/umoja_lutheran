@@ -3,8 +3,8 @@
 @section('content')
 <div class="app-title">
     <div>
-        <h1><i class="fa fa-cubes"></i> My Stock & Revenue Potential</h1>
-        <p>Manage your bar inventory and maximize revenue</p>
+        <h1><i class="fa fa-cubes"></i> My Stock Overview</h1>
+        <p>Monitor your bar inventory and sales performance</p>
     </div>
     <ul class="app-breadcrumb breadcrumb">
         <li class="breadcrumb-item"><i class="fa fa-home fa-lg"></i></li>
@@ -13,45 +13,67 @@
     </ul>
 </div>
 
-<!-- Stats Row -->
 <div class="row mb-4">
-  <div class="col-md col-sm-6 mb-2">
-    <div class="widget-small primary coloured-icon"><i class="icon fa fa-wine-bottle fa-3x"></i>
-      <div class="info">
-        <h4>Products</h4>
-        <p><b>{{ $myStock->count() }}</b></p>
+  <div class="col-md-3 col-sm-6 mb-3">
+    <div class="card border-0 shadow-sm" style="border-radius: 12px; background: linear-gradient(135deg, #940000 0%, #d40000 100%);">
+      <div class="card-body p-3 text-white">
+        <div class="d-flex align-items-center">
+          <div class="rounded-circle mr-3 d-flex align-items-center justify-content-center" style="width: 50px; height: 50px; background: rgba(255,255,255,0.2);">
+            <i class="fa fa-tags fa-lg"></i>
+          </div>
+          <div>
+            <h6 class="mb-0 text-white-50 small">Total Products</h6>
+            <h3 class="mb-0 font-weight-bold">{{ $myStock->count() }}</h3>
+          </div>
+        </div>
       </div>
     </div>
   </div>
-  <div class="col-md col-sm-6 mb-2">
-    <div class="widget-small info coloured-icon"><i class="icon fa fa-cubes fa-3x"></i>
-      <div class="info">
-        <h4>In Stock</h4>
-        <p><b>{{ number_format($myStock->sum('current_stock_pics'), 1) }}</b></p>
+  
+  <div class="col-md-3 col-sm-6 mb-3">
+    <div class="card border-0 shadow-sm" style="border-radius: 12px; background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);">
+      <div class="card-body p-3 text-white">
+        <div class="d-flex align-items-center">
+          <div class="rounded-circle mr-3 d-flex align-items-center justify-content-center" style="width: 50px; height: 50px; background: rgba(255,255,255,0.2);">
+            <i class="fa fa-boxes fa-lg"></i>
+          </div>
+          <div>
+            <h6 class="mb-0 text-white-50 small">In Stock</h6>
+            <h3 class="mb-0 font-weight-bold">{{ number_format($myStock->sum('current_stock_pics'), 0) }}</h3>
+          </div>
+        </div>
       </div>
     </div>
   </div>
-  <div class="col-md col-sm-6 mb-2">
-    <div class="widget-small warning coloured-icon" style="background-color: #e77a31;"><i class="icon fa fa-money fa-3x"></i>
-      <div class="info">
-        <h4>Revenue</h4>
-        <p><b>{{ number_format($myStock->sum('revenue_generated'), 0) }}</b></p>
+
+  <div class="col-md-3 col-sm-6 mb-3">
+    <div class="card border-0 shadow-sm" style="border-radius: 12px; background: linear-gradient(135deg, #f7971e 0%, #ffd200 100%);">
+      <div class="card-body p-3 text-white">
+        <div class="d-flex align-items-center">
+          <div class="rounded-circle mr-3 d-flex align-items-center justify-content-center" style="width: 50px; height: 50px; background: rgba(255,255,255,0.2);">
+            <i class="fa fa-cash-register fa-lg"></i>
+          </div>
+          <div>
+            <h6 class="mb-0 text-white-50 small">Sales Revenue</h6>
+            <h3 class="mb-0 font-weight-bold">{{ number_format($myStock->sum('revenue_generated'), 0) }}</h3>
+          </div>
+        </div>
       </div>
     </div>
   </div>
-  <div class="col-md col-sm-6 mb-2">
-    <div class="widget-small primary coloured-icon" style="background-color: #764ba2;"><i class="icon fa fa-money-bill-wave fa-3x"></i>
-      <div class="info">
-        <h4>Value</h4>
-        <p><b>{{ number_format($myStock->sum('revenue_serving'), 0) }}</b></p>
-      </div>
-    </div>
-  </div>
-  <div class="col-md col-sm-6 mb-2">
-    <div class="widget-small success coloured-icon"><i class="icon fa fa-chart-line fa-3x"></i>
-      <div class="info">
-        <h4>Potential</h4>
-        <p><b>{{ number_format($myStock->sum('current_profit'), 0) }}</b></p>
+
+  <div class="col-md-3 col-sm-6 mb-3">
+    <div class="card border-0 shadow-sm" style="border-radius: 12px; background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
+      <div class="card-body p-3 text-white">
+        <div class="d-flex align-items-center">
+          <div class="rounded-circle mr-3 d-flex align-items-center justify-content-center" style="width: 50px; height: 50px; background: rgba(255,255,255,0.2);">
+            <i class="fa fa-hand-holding-usd fa-lg"></i>
+          </div>
+          <div>
+            <h6 class="mb-0 text-white-50 small">Estimated Value</h6>
+            <h3 class="mb-0 font-weight-bold">{{ number_format($myStock->sum('revenue_serving'), 0) }}</h3>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -65,20 +87,24 @@
             </div>
 
             <div class="tile-body">
-                <!-- Search Area -->
-                <div class="row mb-3">
+                <!-- Search & Filters (Matching Products page style) -->
+                <div class="row mb-4 bg-light p-3 rounded mx-0 border">
                     <div class="col-md-6">
+                        <label class="small font-weight-bold text-muted">SEARCH PRODUCT / BRAND / CATEGORY</label>
                         <div class="input-group">
                             <div class="input-group-prepend">
-                                <span class="input-group-text"><i class="fa fa-search"></i></span>
+                                <span class="input-group-text bg-white"><i class="fa fa-search"></i></span>
                             </div>
-                            <input type="text" id="inventorySearch" class="form-control" placeholder="Search products...">
+                            <input type="text" id="inventorySearch" class="form-control" placeholder="Type to search stock...">
                         </div>
                     </div>
-                    <div class="col-md-6 text-right">
-                        <div id="searchResults" class="text-muted pt-2">
-                            <span id="resultCount">{{ $myStock->count() }}</span> items found
+                    <div class="col-md-6 text-right d-flex align-items-end justify-content-end">
+                        <div id="searchResults" class="text-muted pr-3 pb-2">
+                            Showing <span id="resultCount" class="font-weight-bold mx-1 text-dark">{{ $myStock->count() }}</span> products
                         </div>
+                        <button class="btn btn-secondary shadow-sm" onclick="location.reload()">
+                            <i class="fa fa-refresh"></i> Reset View
+                        </button>
                     </div>
                 </div>
 
@@ -289,10 +315,10 @@ $(document).ready(function() {
 
     $(document).on('change', '.stock-checkbox', function() {
         if ($(this).is(':checked')) {
-            $(this).closest('.inventory-card').find('.card').css('border-color', '#e77a31');
+            $(this).closest('.inventory-card').find('.card').css({'border': '2px solid #e77a31', 'box-shadow': '0 0 0 0.2rem rgba(231,122,49,0.25)'});
             $(this).closest('.inventory-card').find('.card').addClass('shadow-lg');
         } else {
-            $(this).closest('.inventory-card').find('.card').css('border-color', '');
+            $(this).closest('.inventory-card').find('.card').css({'border': '', 'box-shadow': ''});
             $(this).closest('.inventory-card').find('.card').removeClass('shadow-lg');
         }
         updateBulkBar();
