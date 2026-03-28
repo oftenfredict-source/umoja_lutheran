@@ -560,6 +560,7 @@ class EmergencyAuthController extends Controller
                 return redirect()->route('customer.dashboard')->with('success', 'Welcome back, ' . $user->name . '!');
             }
 
+        } catch (\Throwable $e) {
             \Log::channel('daily')->error('Login error (Throwable)', [
                 'error' => $e->getMessage(),
                 'trace' => substr($e->getTraceAsString(), 0, 1000),
