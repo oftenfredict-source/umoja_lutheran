@@ -27,12 +27,12 @@ class AdminController extends Controller
     {
         try {
             $user = auth()->guard('staff')->user() ?? auth()->guard('guest')->user();
-            
+
             // Redirect Head Chef to their specific dashboard
             if ($user && \App\Services\RolePermissionService::hasRole($user, 'head_chef')) {
                 return redirect()->route('chef-master.dashboard');
             }
-            
+
             // Redirect Bar Keeper to their specific dashboard
             if ($user && \App\Services\RolePermissionService::hasRole($user, 'bar_keeper')) {
                 return redirect()->route('bar-keeper.dashboard');
@@ -42,7 +42,7 @@ class AdminController extends Controller
             $today = Carbon::today();
             $thisMonth = Carbon::now()->startOfMonth();
             $lastMonth = Carbon::now()->subMonth()->startOfMonth();
-            
+
             // Get exchange rate for currency conversion
             $exchangeRate = 2500; // Default fallback rate
             try {
@@ -52,40 +52,40 @@ class AdminController extends Controller
                 \Log::warning('Failed to get exchange rate, using default', ['error' => $e->getMessage()]);
                 // Use default rate if service fails
             }
-            
+
             // Calculate total revenue (bookings + service requests)
             // Include both paid and partial payments
             $totalBookingRevenueTZS = Booking::whereIn('payment_status', ['paid', 'partial'])
                 ->whereNotNull('amount_paid')
                 ->where('amount_paid', '>', 0)
                 ->get()
-                ->sum(function($booking) use ($exchangeRate) {
+                ->sum(function ($booking) use ($exchangeRate) {
                     return ($booking->amount_paid ?? 0) * ($booking->locked_exchange_rate ?? $exchangeRate);
                 });
             $totalServiceRevenueTZS = ServiceRequest::where('status', 'completed')->sum('total_price_tsh');
-            
+
             // Calculate Day Services Revenue (Sum amount_paid or amount based on guest_type)
-            $totalDayServiceRevenueTZS = \App\Models\DayService::where('payment_status', 'paid')->get()->sum(function($s) use ($exchangeRate) {
+            $totalDayServiceRevenueTZS = \App\Models\DayService::where('payment_status', 'paid')->get()->sum(function ($s) use ($exchangeRate) {
                 // If amount_paid is null, fallback to amount. Guest type determines TZS or USD.
                 $amount = $s->amount_paid ?? $s->amount ?? 0;
                 return $s->guest_type === 'tanzanian' ? $amount : ($amount * ($s->exchange_rate ?? $exchangeRate));
             });
 
             $totalRevenueTZS = $totalBookingRevenueTZS + $totalServiceRevenueTZS + $totalDayServiceRevenueTZS;
-            
+
             // Calculate today's revenue (use paid_at if available, otherwise created_at)
             $todayBookingRevenueTZS = Booking::whereIn('payment_status', ['paid', 'partial'])
                 ->whereNotNull('amount_paid')
                 ->where('amount_paid', '>', 0)
-                ->where(function($q) use ($today) {
+                ->where(function ($q) use ($today) {
                     $q->whereDate('paid_at', $today)
-                      ->orWhere(function($subQ) use ($today) {
-                          $subQ->whereNull('paid_at')
-                               ->whereDate('created_at', $today);
-                      });
+                        ->orWhere(function ($subQ) use ($today) {
+                            $subQ->whereNull('paid_at')
+                                ->whereDate('created_at', $today);
+                        });
                 })
                 ->get()
-                ->sum(function($booking) use ($exchangeRate) {
+                ->sum(function ($booking) use ($exchangeRate) {
                     return ($booking->amount_paid ?? 0) * ($booking->locked_exchange_rate ?? $exchangeRate);
                 });
             $todayServiceRevenueTZS = ServiceRequest::where('status', 'completed')
@@ -94,26 +94,26 @@ class AdminController extends Controller
 
             $todayDayServiceRevenueTZS = \App\Models\DayService::where('payment_status', 'paid')
                 ->whereDate('paid_at', $today)
-                ->get()->sum(function($s) use ($exchangeRate) {
+                ->get()->sum(function ($s) use ($exchangeRate) {
                     $amount = $s->amount_paid ?? $s->amount ?? 0;
                     return $s->guest_type === 'tanzanian' ? $amount : ($amount * ($s->exchange_rate ?? $exchangeRate));
                 });
 
             $todayRevenueTZS = $todayBookingRevenueTZS + $todayServiceRevenueTZS + $todayDayServiceRevenueTZS;
-            
+
             // Calculate this month's revenue
             $monthBookingRevenueTZS = Booking::whereIn('payment_status', ['paid', 'partial'])
                 ->whereNotNull('amount_paid')
                 ->where('amount_paid', '>', 0)
-                ->where(function($q) use ($thisMonth) {
+                ->where(function ($q) use ($thisMonth) {
                     $q->where('paid_at', '>=', $thisMonth)
-                      ->orWhere(function($subQ) use ($thisMonth) {
-                          $subQ->whereNull('paid_at')
-                               ->where('created_at', '>=', $thisMonth);
-                      });
+                        ->orWhere(function ($subQ) use ($thisMonth) {
+                            $subQ->whereNull('paid_at')
+                                ->where('created_at', '>=', $thisMonth);
+                        });
                 })
                 ->get()
-                ->sum(function($booking) use ($exchangeRate) {
+                ->sum(function ($booking) use ($exchangeRate) {
                     return ($booking->amount_paid ?? 0) * ($booking->locked_exchange_rate ?? $exchangeRate);
                 });
             $monthServiceRevenueTZS = ServiceRequest::where('status', 'completed')
@@ -122,34 +122,35 @@ class AdminController extends Controller
 
             $monthDayServiceRevenueTZS = \App\Models\DayService::where('payment_status', 'paid')
                 ->where('paid_at', '>=', $thisMonth)
-                ->get()->sum(function($s) use ($exchangeRate) {
+                ->get()->sum(function ($s) use ($exchangeRate) {
                     $amount = $s->amount_paid ?? $s->amount ?? 0;
                     return $s->guest_type === 'tanzanian' ? $amount : ($amount * ($s->exchange_rate ?? $exchangeRate));
                 });
 
             $monthRevenueTZS = $monthBookingRevenueTZS + $monthServiceRevenueTZS + $monthDayServiceRevenueTZS;
-            
+
             // Statistics
             $stats = [
                 'total_users' => \App\Models\Staff::count() + \App\Models\Guest::count(),
                 'total_rooms' => Room::count(),
                 'total_bookings' => Booking::count(),
                 'total_revenue' => $totalRevenueTZS,
-                
+
                 // Today's stats
                 'today_bookings' => Booking::whereDate('created_at', $today)->count(),
                 'today_revenue' => $todayRevenueTZS,
-                
+                'today_day_service_revenue' => $todayDayServiceRevenueTZS,
+
                 // This month's stats
                 'month_bookings' => Booking::where('created_at', '>=', $thisMonth)->count(),
                 'month_revenue' => $monthRevenueTZS,
-                
+
                 // Booking status counts
                 'pending_bookings' => Booking::where('status', 'pending')->count(),
                 'confirmed_bookings' => Booking::where('status', 'confirmed')->count(),
                 'cancelled_bookings' => Booking::where('status', 'cancelled')->count(),
                 'completed_bookings' => Booking::where('status', 'completed')->count(),
-                
+
                 // Payment status (include partial payments as "paid" for counting purposes)
                 'paid_bookings' => Booking::whereIn('payment_status', ['paid', 'partial'])
                     ->whereNotNull('amount_paid')
@@ -157,38 +158,41 @@ class AdminController extends Controller
                     ->count(),
                 // Unpaid bookings: only pending payments (bookings with no payment received)
                 'unpaid_bookings' => Booking::where('payment_status', 'pending')->count(),
-                
+
                 // Service requests
                 'pending_requests' => ServiceRequest::where('status', 'pending')->count(),
                 'approved_requests' => ServiceRequest::where('status', 'approved')->count(),
-                
+
                 // Purchase requests
                 'pending_purchase_requests' => \App\Models\PurchaseRequest::where('status', 'pending')->count(),
-                
+
+                // Shopping List approvals
+                'pending_shopping_approvals' => \App\Models\ShoppingList::where('status', 'accountant_checked')->count(),
+
                 // Extension requests
                 'pending_extensions' => Booking::where('extension_status', 'pending')->count(),
-                
+
                 // Total active guests (currently checked in)
                 'active_guests' => Booking::where('check_in_status', 'checked_in')
                     ->where('check_out', '>=', $today)
                     ->sum('number_of_guests') ?: Booking::where('check_in_status', 'checked_in')->count(),
             ];
-            
+
             // Recent bookings (include all, including expired - they'll be handled in the view)
             // Get recent bookings - group corporate bookings by company
             $allRecentBookings = Booking::with(['room', 'company'])
                 ->orderBy('created_at', 'desc')
                 ->limit(20)
                 ->get();
-            
+
             // Separate corporate and individual bookings
             $corporateBookings = $allRecentBookings->where('is_corporate_booking', true);
             $individualBookings = $allRecentBookings->where('is_corporate_booking', false);
-            
+
             // Group corporate bookings by company
             $groupedCorporateBookings = collect();
             $companyIds = $corporateBookings->whereNotNull('company_id')->pluck('company_id')->unique();
-            
+
             foreach ($companyIds as $companyId) {
                 $companyBookings = $corporateBookings->where('company_id', $companyId);
                 if ($companyBookings->count() > 0) {
@@ -200,27 +204,33 @@ class AdminController extends Controller
                     ]);
                 }
             }
-            
+
             // Combine grouped corporate bookings with individual bookings, limit to 10
             $recentBookings = $groupedCorporateBookings->take(5)->merge($individualBookings->take(5))->take(10);
-            
+
             // Get pending extension requests
             $pendingExtensions = Booking::where('extension_status', 'pending')
                 ->with(['room'])
                 ->orderBy('extension_requested_at', 'asc')
                 ->get();
-            
+
+            // Get pending stock requests for manager approval
+            $pendingStockRequests = \App\Models\StockRequest::where('status', 'pending_manager')
+                ->with(['requester', 'productVariant.product'])
+                ->latest()
+                ->get();
+
             // Revenue chart data (last 6 months) - in TZS
             $revenueData = [];
             for ($i = 5; $i >= 0; $i--) {
                 $month = Carbon::now()->subMonths($i);
                 $monthStart = $month->copy()->startOfMonth();
                 $monthEnd = $month->copy()->endOfMonth();
-                
+
                 $monthBookingRevenueUSD = Booking::whereBetween('created_at', [$monthStart, $monthEnd])
                     ->where('payment_status', 'paid')
                     ->get()
-                    ->sum(function($booking) {
+                    ->sum(function ($booking) {
                         return $booking->amount_paid ?? $booking->total_price ?? 0;
                     });
                 $monthServiceRevenueTZS = ServiceRequest::where('status', 'completed')
@@ -229,19 +239,19 @@ class AdminController extends Controller
 
                 $monthDayServiceRevenueTZS = \App\Models\DayService::where('payment_status', 'paid')
                     ->whereBetween('paid_at', [$monthStart, $monthEnd])
-                    ->get()->sum(function($s) use ($exchangeRate) {
+                    ->get()->sum(function ($s) use ($exchangeRate) {
                         $amount = $s->amount_paid ?? $s->amount ?? 0;
                         return $s->guest_type === 'tanzanian' ? $amount : ($amount * ($s->exchange_rate ?? $exchangeRate));
                     });
 
                 $monthRevenueTZS = ($monthBookingRevenueUSD * $exchangeRate) + $monthServiceRevenueTZS + $monthDayServiceRevenueTZS;
-                
+
                 $revenueData[] = [
                     'month' => $month->format('M Y'),
                     'revenue' => $monthRevenueTZS
                 ];
             }
-            
+
             // Booking status chart data
             $bookingStatusData = [
                 'Pending' => Booking::where('status', 'pending')->count(),
@@ -249,7 +259,7 @@ class AdminController extends Controller
                 'Completed' => Booking::where('status', 'completed')->count(),
                 'Cancelled' => Booking::where('status', 'cancelled')->count(),
             ];
-            
+
             return view('dashboard.index', [
                 'role' => 'manager',
                 'userName' => $user->name ?? 'Manager',
@@ -260,6 +270,7 @@ class AdminController extends Controller
                 'pendingExtensions' => $pendingExtensions,
                 'revenueData' => $revenueData,
                 'bookingStatusData' => $bookingStatusData,
+                'pendingStockRequests' => $pendingStockRequests,
             ]);
         } catch (\Exception $e) {
             \Log::error('Admin dashboard error', [
@@ -268,7 +279,7 @@ class AdminController extends Controller
                 'file' => $e->getFile(),
                 'line' => $e->getLine()
             ]);
-            
+
             // Return error view with minimal data
             $user = auth()->guard('staff')->user() ?? auth()->guard('guest')->user();
             return view('dashboard.index', [
@@ -285,7 +296,7 @@ class AdminController extends Controller
             ]);
         }
     }
-    
+
     /**
      * Show extension requests page
      */
@@ -303,10 +314,10 @@ class AdminController extends Controller
         // Search functionality
         if ($request->has('search') && $request->search) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('booking_reference', 'like', "%{$search}%")
-                  ->orWhere('guest_name', 'like', "%{$search}%")
-                  ->orWhere('guest_email', 'like', "%{$search}%");
+                    ->orWhere('guest_name', 'like', "%{$search}%")
+                    ->orWhere('guest_email', 'like', "%{$search}%");
             });
         }
 
@@ -332,82 +343,82 @@ class AdminController extends Controller
             'exchangeRate' => $exchangeRate,
         ]);
     }
-    
+
     /**
      * Display all users (employees and customers)
      */
     public function users(Request $request)
     {
         $tab = $request->get('tab', 'employees'); // Default to employees tab
-        
+
         // Get employees (staff)
         $employeesQuery = \App\Models\Staff::query();
-        
+
         // Filter employees
         if ($request->has('search_employee') && $request->search_employee) {
             $search = $request->search_employee;
-            $employeesQuery->where(function($q) use ($search) {
+            $employeesQuery->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%")
-                  ->orWhere('role', 'like', "%{$search}%");
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('role', 'like', "%{$search}%");
             });
         }
-        
+
         // Get customers (guests)
         $customersQuery = \App\Models\Guest::query();
-        
+
         // Filter customers
         if ($request->has('search_customer') && $request->search_customer) {
             $search = $request->search_customer;
-            $customersQuery->where(function($q) use ($search) {
+            $customersQuery->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
+                    ->orWhere('email', 'like', "%{$search}%");
             });
         }
-        
+
         // Get employees with pagination
         $employees = $employeesQuery->orderBy('created_at', 'desc')->paginate(5, ['*'], 'employees_page');
-        
+
         // Get customers with booking statistics
         $customers = $customersQuery->orderBy('created_at', 'desc')->paginate(5, ['*'], 'customers_page');
-        
+
         // Get exchange rate for currency conversion
         $currencyService = new CurrencyExchangeService();
         $exchangeRate = $currencyService->getUsdToTshRate();
-        
+
         // Calculate customer statistics (include partial payments)
         foreach ($customers as $customer) {
             // Match bookings by email first, then by name as fallback
-            $customerBookings = Booking::where(function($query) use ($customer) {
+            $customerBookings = Booking::where(function ($query) use ($customer) {
                 $query->where('guest_email', $customer->email)
-                      ->orWhere('guest_name', 'like', '%' . $customer->name . '%');
+                    ->orWhere('guest_name', 'like', '%' . $customer->name . '%');
             })->get();
-            
+
             // Total spent: include both paid and partial payments (convert USD to TZS)
             $paidBookings = $customerBookings->where('payment_status', 'paid');
             $partialBookings = $customerBookings->where('payment_status', 'partial');
-            $totalSpentUSD = $paidBookings->sum(function($booking) {
+            $totalSpentUSD = $paidBookings->sum(function ($booking) {
                 return $booking->amount_paid ?? $booking->total_price ?? 0;
-            }) + $partialBookings->sum(function($booking) {
+            }) + $partialBookings->sum(function ($booking) {
                 return $booking->amount_paid ?? 0;
             });
             $customer->total_spent = $totalSpentUSD * $exchangeRate;
-            
+
             // Total bookings count
             $customer->total_bookings = $customerBookings->count();
-            
+
             // Paid bookings: include both paid and partial (any booking with payment received)
             $customer->paid_bookings = $customerBookings->whereIn('payment_status', ['paid', 'partial'])
-                ->filter(function($booking) {
+                ->filter(function ($booking) {
                     return ($booking->amount_paid ?? 0) > 0;
                 })
                 ->count();
-            
+
             // First and last booking
             $lastBooking = $customerBookings->sortByDesc('created_at')->first();
             $customer->last_booking = $lastBooking;
             $customer->first_booking = $customerBookings->sortBy('created_at')->first();
-            
+
             // Set company if it was a corporate booking
             if ($lastBooking && $lastBooking->is_corporate_booking && $lastBooking->company_id) {
                 $customer->company = $lastBooking->company;
@@ -415,7 +426,7 @@ class AdminController extends Controller
                 $customer->company = null;
             }
         }
-        
+
         $stats = [
             'total' => \App\Models\Staff::count() + \App\Models\Guest::count(),
             'managers' => \App\Models\Staff::where('role', 'manager')->count(),
@@ -423,7 +434,7 @@ class AdminController extends Controller
             'guests' => \App\Models\Guest::whereHas('bookings')->count(),
             'employees' => \App\Models\Staff::whereIn('role', ['manager', 'reception'])->count(),
         ];
-        
+
         return view('dashboard.admin-users', [
             'role' => 'manager',
             'userName' => (auth()->guard('staff')->user() ?? auth()->guard('guest')->user())->name ?? 'Manager',
@@ -435,7 +446,7 @@ class AdminController extends Controller
             'filters' => $request->only(['search_employee', 'search_customer']),
         ]);
     }
-    
+
     /**
      * Display all payments
      */
@@ -451,10 +462,10 @@ class AdminController extends Controller
         // Search functionality
         if ($request->has('search') && $request->search) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('booking_reference', 'like', "%{$search}%")
-                  ->orWhere('guest_name', 'like', "%{$search}%")
-                  ->orWhere('guest_email', 'like', "%{$search}%");
+                    ->orWhere('guest_name', 'like', "%{$search}%")
+                    ->orWhere('guest_email', 'like', "%{$search}%");
             });
         }
 
@@ -470,21 +481,21 @@ class AdminController extends Controller
 
         // Filter by date range (use paid_at if available, otherwise created_at)
         if ($request->has('date_from') && $request->date_from) {
-            $query->where(function($q) use ($request) {
+            $query->where(function ($q) use ($request) {
                 $q->whereDate('paid_at', '>=', $request->date_from)
-                  ->orWhere(function($subQ) use ($request) {
-                      $subQ->whereNull('paid_at')
-                           ->whereDate('created_at', '>=', $request->date_from);
-                  });
+                    ->orWhere(function ($subQ) use ($request) {
+                        $subQ->whereNull('paid_at')
+                            ->whereDate('created_at', '>=', $request->date_from);
+                    });
             });
         }
         if ($request->has('date_to') && $request->date_to) {
-            $query->where(function($q) use ($request) {
+            $query->where(function ($q) use ($request) {
                 $q->whereDate('paid_at', '<=', $request->date_to)
-                  ->orWhere(function($subQ) use ($request) {
-                      $subQ->whereNull('paid_at')
-                           ->whereDate('created_at', '<=', $request->date_to);
-                  });
+                    ->orWhere(function ($subQ) use ($request) {
+                        $subQ->whereNull('paid_at')
+                            ->whereDate('created_at', '<=', $request->date_to);
+                    });
             });
         }
 
@@ -496,71 +507,71 @@ class AdminController extends Controller
         // Calculate statistics (include both paid and partial payments)
         $today = Carbon::today();
         $thisMonth = Carbon::now()->startOfMonth();
-        
+
         // Total revenue (all time) - include partial payments
         $bookingRevenueTZS = Booking::whereIn('payment_status', ['paid', 'partial'])
             ->whereNotNull('amount_paid')
             ->where('amount_paid', '>', 0)
             ->get()
-            ->sum(function($booking) use ($exchangeRate) {
+            ->sum(function ($booking) use ($exchangeRate) {
                 return ($booking->amount_paid ?? 0) * ($booking->locked_exchange_rate ?? $exchangeRate);
             });
-        
+
         // Add all-time Service Revenue
         $serviceRevenueTZS = ServiceRequest::where('status', 'completed')->sum('total_price_tsh');
 
         // Add all-time Day Service Revenue
-        $dayServiceRevenueTZS = \App\Models\DayService::where('payment_status', 'paid')->get()->sum(function($s) use ($exchangeRate) {
+        $dayServiceRevenueTZS = \App\Models\DayService::where('payment_status', 'paid')->get()->sum(function ($s) use ($exchangeRate) {
             $amount = $s->amount_paid ?? $s->amount ?? 0;
             return $s->guest_type === 'tanzanian' ? $amount : ($amount * ($s->exchange_rate ?? $exchangeRate));
         });
 
         $totalRevenueTZS = $bookingRevenueTZS + $serviceRevenueTZS + $dayServiceRevenueTZS;
         $totalRevenueUSD = $exchangeRate > 0 ? ($totalRevenueTZS / $exchangeRate) : 0;
-        
+
         // Today's revenue
         $todayBookingTZS = Booking::whereIn('payment_status', ['paid', 'partial'])
             ->whereNotNull('amount_paid')
             ->where('amount_paid', '>', 0)
-            ->where(function($q) use ($today) {
+            ->where(function ($q) use ($today) {
                 $q->whereDate('paid_at', $today)
-                  ->orWhere(function($subQ) use ($today) {
-                      $subQ->whereNull('paid_at')
-                           ->whereDate('created_at', $today);
-                  });
+                    ->orWhere(function ($subQ) use ($today) {
+                        $subQ->whereNull('paid_at')
+                            ->whereDate('created_at', $today);
+                    });
             })
             ->get()
-            ->sum(function($booking) use ($exchangeRate) {
+            ->sum(function ($booking) use ($exchangeRate) {
                 return ($booking->amount_paid ?? 0) * ($booking->locked_exchange_rate ?? $exchangeRate);
             });
-            
+
         $todayServiceTZS = ServiceRequest::where('status', 'completed')
             ->whereDate('completed_at', $today)
             ->sum('total_price_tsh');
 
         $todayDayServiceTZS = \App\Models\DayService::where('payment_status', 'paid')
             ->whereDate('paid_at', $today)
-            ->get()->sum(function($s) use ($exchangeRate) {
+            ->get()->sum(function ($s) use ($exchangeRate) {
                 $amount = $s->amount_paid ?? $s->amount ?? 0;
                 return $s->guest_type === 'tanzanian' ? $amount : ($amount * ($s->exchange_rate ?? $exchangeRate));
             });
 
         $todayRevenueTZS = $todayBookingTZS + $todayServiceTZS + $todayDayServiceTZS;
         $todayRevenueUSD = $exchangeRate > 0 ? ($todayRevenueTZS / $exchangeRate) : 0;
-        
+
         // This month's revenue
         $monthBookingTZS = Booking::whereIn('payment_status', ['paid', 'partial'])
             ->whereNotNull('amount_paid')
             ->where('amount_paid', '>', 0)
-            ->where(function($q) use ($thisMonth) {
+            ->where(function ($q) use ($thisMonth) {
                 $q->where('paid_at', '>=', $thisMonth)
-                  ->orWhere(function($subQ) use ($thisMonth) {
-                      $subQ->whereNull('paid_at')
-                           ->where('created_at', '>=', $thisMonth);
-                  });
+                    ->orWhere(function ($subQ) use ($thisMonth) {
+                        $subQ->whereNull('paid_at')
+                            ->where('created_at', '>=', $thisMonth);
+                    });
             })
             ->get()
-            ->sum(function($booking) use ($exchangeRate) {
+            ->sum(function ($booking) use ($exchangeRate) {
                 return ($booking->amount_paid ?? 0) * ($booking->locked_exchange_rate ?? $exchangeRate);
             });
 
@@ -570,20 +581,20 @@ class AdminController extends Controller
 
         $monthDayServiceTZS = \App\Models\DayService::where('payment_status', 'paid')
             ->where('paid_at', '>=', $thisMonth)
-            ->get()->sum(function($s) use ($exchangeRate) {
+            ->get()->sum(function ($s) use ($exchangeRate) {
                 $amount = $s->amount_paid ?? $s->amount ?? 0;
                 return $s->guest_type === 'tanzanian' ? $amount : ($amount * ($s->exchange_rate ?? $exchangeRate));
             });
 
         $monthRevenueTZS = $monthBookingTZS + $monthServiceTZS + $monthDayServiceTZS;
         $monthRevenueUSD = $exchangeRate > 0 ? ($monthRevenueTZS / $exchangeRate) : 0;
-        
+
         // Total payments count
         $totalPayments = Booking::whereIn('payment_status', ['paid', 'partial'])
             ->whereNotNull('amount_paid')
             ->where('amount_paid', '>', 0)
             ->count();
-        
+
         // Pending and partial payment stats
         $pendingPayments = Booking::where('payment_status', 'pending')
             ->whereNotNull('total_price')
@@ -596,7 +607,7 @@ class AdminController extends Controller
             ->count();
         $partialAmount = Booking::where('payment_status', 'partial')
             ->get()
-            ->sum(function($booking) {
+            ->sum(function ($booking) {
                 return ($booking->total_price ?? 0) - ($booking->amount_paid ?? 0);
             });
 
@@ -623,7 +634,7 @@ class AdminController extends Controller
             'filters' => $request->only(['search', 'payment_method', 'payment_status', 'date_from', 'date_to']),
         ]);
     }
-    
+
     /**
      * Display payment reports
      */
@@ -640,20 +651,20 @@ class AdminController extends Controller
         // Convert dates to Carbon instances for proper comparison
         $startDateCarbon = Carbon::parse($startDate)->startOfDay();
         $endDateCarbon = Carbon::parse($endDate)->endOfDay();
-        
+
         $payments = Booking::whereIn('payment_status', ['paid', 'partial'])
             ->whereNotNull('amount_paid')
             ->where('amount_paid', '>', 0)
-            ->where(function($q) use ($startDateCarbon, $endDateCarbon) {
+            ->where(function ($q) use ($startDateCarbon, $endDateCarbon) {
                 // Use paid_at if available, otherwise created_at
-                $q->where(function($subQ) use ($startDateCarbon, $endDateCarbon) {
+                $q->where(function ($subQ) use ($startDateCarbon, $endDateCarbon) {
                     $subQ->whereNotNull('paid_at')
-                         ->whereDate('paid_at', '>=', $startDateCarbon)
-                         ->whereDate('paid_at', '<=', $endDateCarbon);
-                })->orWhere(function($subQ) use ($startDateCarbon, $endDateCarbon) {
+                        ->whereDate('paid_at', '>=', $startDateCarbon)
+                        ->whereDate('paid_at', '<=', $endDateCarbon);
+                })->orWhere(function ($subQ) use ($startDateCarbon, $endDateCarbon) {
                     $subQ->whereNull('paid_at')
-                         ->whereDate('created_at', '>=', $startDateCarbon)
-                         ->whereDate('created_at', '<=', $endDateCarbon);
+                        ->whereDate('created_at', '>=', $startDateCarbon)
+                        ->whereDate('created_at', '<=', $endDateCarbon);
                 });
             })
             ->with('room')
@@ -661,13 +672,13 @@ class AdminController extends Controller
             ->get();
 
         // Calculate statistics
-        $totalRevenueUSD = $payments->sum(function($booking) {
+        $totalRevenueUSD = $payments->sum(function ($booking) {
             return $booking->amount_paid ?? $booking->total_price ?? 0;
         });
         $totalRevenueTZS = $totalRevenueUSD * $exchangeRate;
         $totalPayments = $payments->count();
         $averagePayment = $totalPayments > 0 ? $totalRevenueTZS / $totalPayments : 0;
-        
+
         $stats = [
             'total_payments' => $totalPayments,
             'total_revenue' => $totalRevenueTZS,
@@ -680,11 +691,11 @@ class AdminController extends Controller
         ];
 
         // Calculate daily revenue for chart (use paid_at if available, otherwise created_at)
-        $dailyRevenue = $payments->groupBy(function($payment) {
+        $dailyRevenue = $payments->groupBy(function ($payment) {
             $date = $payment->paid_at ?? $payment->created_at;
             return Carbon::parse($date)->format('M d');
-        })->map(function($dayPayments) use ($exchangeRate) {
-            return round($dayPayments->sum(function($payment) use ($exchangeRate) {
+        })->map(function ($dayPayments) use ($exchangeRate) {
+            return round($dayPayments->sum(function ($payment) use ($exchangeRate) {
                 return ($payment->amount_paid ?? $payment->total_price ?? 0) * $exchangeRate;
             }), 0);
         });
@@ -701,7 +712,7 @@ class AdminController extends Controller
             'dailyRevenue' => $dailyRevenue,
         ]);
     }
-    
+
     /**
      * Display general reports
      */
@@ -734,19 +745,19 @@ class AdminController extends Controller
             ->whereIn('payment_status', ['paid', 'partial'])
             ->whereNotNull('amount_paid')
             ->where('amount_paid', '>', 0);
-        
+
         $totalRevenueTZS = Booking::whereIn('payment_status', ['paid', 'partial'])
             ->whereNotNull('amount_paid')
             ->where('amount_paid', '>', 0)
-            ->where(function($q) use ($dateFromCarbon, $dateToCarbon) {
+            ->where(function ($q) use ($dateFromCarbon, $dateToCarbon) {
                 $q->whereBetween('paid_at', [$dateFromCarbon, $dateToCarbon])
-                  ->orWhere(function($subQ) use ($dateFromCarbon, $dateToCarbon) {
-                      $subQ->whereNull('paid_at')
-                           ->whereBetween('created_at', [$dateFromCarbon, $dateToCarbon]);
-                  });
+                    ->orWhere(function ($subQ) use ($dateFromCarbon, $dateToCarbon) {
+                        $subQ->whereNull('paid_at')
+                            ->whereBetween('created_at', [$dateFromCarbon, $dateToCarbon]);
+                    });
             })
             ->get()
-            ->sum(function($booking) use ($exchangeRate) {
+            ->sum(function ($booking) use ($exchangeRate) {
                 return ($booking->amount_paid ?? 0) * ($booking->locked_exchange_rate ?? $exchangeRate);
             });
         $paidBookingsCount = $paidBookingsQuery->count();
@@ -755,39 +766,39 @@ class AdminController extends Controller
         $thisMonth = Carbon::now()->startOfMonth();
         $lastMonth = Carbon::now()->subMonth()->startOfMonth();
         $lastMonthEnd = Carbon::now()->subMonth()->endOfMonth();
-        
+
         $monthBookings = Booking::where('created_at', '>=', $thisMonth)->count();
         $lastMonthBookings = Booking::whereBetween('created_at', [$lastMonth, $lastMonthEnd])->count();
-        
+
         // This month revenue (include partial payments)
         $monthBookingsData = Booking::whereIn('payment_status', ['paid', 'partial'])
             ->whereNotNull('amount_paid')
             ->where('amount_paid', '>', 0)
-            ->where(function($q) use ($thisMonth) {
+            ->where(function ($q) use ($thisMonth) {
                 $q->where('paid_at', '>=', $thisMonth)
-                  ->orWhere(function($subQ) use ($thisMonth) {
-                      $subQ->whereNull('paid_at')
-                           ->where('created_at', '>=', $thisMonth);
-                  });
+                    ->orWhere(function ($subQ) use ($thisMonth) {
+                        $subQ->whereNull('paid_at')
+                            ->where('created_at', '>=', $thisMonth);
+                    });
             })
             ->get();
-        $monthRevenueTZS = $monthBookingsData->sum(function($booking) use ($exchangeRate) {
+        $monthRevenueTZS = $monthBookingsData->sum(function ($booking) use ($exchangeRate) {
             return ($booking->amount_paid ?? 0) * ($booking->locked_exchange_rate ?? $exchangeRate);
         });
-        
+
         // Last month revenue (include partial payments)
         $lastMonthBookingsData = Booking::whereIn('payment_status', ['paid', 'partial'])
             ->whereNotNull('amount_paid')
             ->where('amount_paid', '>', 0)
-            ->where(function($q) use ($lastMonth, $lastMonthEnd) {
+            ->where(function ($q) use ($lastMonth, $lastMonthEnd) {
                 $q->whereBetween('paid_at', [$lastMonth, $lastMonthEnd])
-                  ->orWhere(function($subQ) use ($lastMonth, $lastMonthEnd) {
-                      $subQ->whereNull('paid_at')
-                           ->whereBetween('created_at', [$lastMonth, $lastMonthEnd]);
-                  });
+                    ->orWhere(function ($subQ) use ($lastMonth, $lastMonthEnd) {
+                        $subQ->whereNull('paid_at')
+                            ->whereBetween('created_at', [$lastMonth, $lastMonthEnd]);
+                    });
             })
             ->get();
-        $lastMonthRevenueTZS = $lastMonthBookingsData->sum(function($booking) use ($exchangeRate) {
+        $lastMonthRevenueTZS = $lastMonthBookingsData->sum(function ($booking) use ($exchangeRate) {
             return ($booking->amount_paid ?? 0) * ($booking->locked_exchange_rate ?? $exchangeRate);
         });
 
@@ -809,8 +820,8 @@ class AdminController extends Controller
             })
             ->sortByDesc('total_revenue')
             ->take(10);
-        
-        $topRooms = $topRoomsData->map(function($item) {
+
+        $topRooms = $topRoomsData->map(function ($item) {
             $room = Room::find($item->room_id);
             $item->room = $room;
             return $item;
@@ -849,7 +860,7 @@ class AdminController extends Controller
 
         // Get day services statistics
         $dayServicesAll = \App\Models\DayService::whereBetween('service_date', [$dateFromCarbon, $dateToCarbon])->get();
-        
+
         $dayServicesStats = [
             'total' => $dayServicesAll->count(),
             'paid' => $dayServicesAll->where('payment_status', 'paid')->count(),
@@ -870,38 +881,38 @@ class AdminController extends Controller
         }
 
         // Day services by type
-        $swimmingServices = $dayServicesAll->filter(function($service) {
+        $swimmingServices = $dayServicesAll->filter(function ($service) {
             return $service->service_type === 'swimming';
         });
-        $swimmingWithBucketServices = $dayServicesAll->filter(function($service) {
+        $swimmingWithBucketServices = $dayServicesAll->filter(function ($service) {
             return in_array($service->service_type, ['swimming_with_bucket', 'swimming-with-bucket']);
         });
-        $ceremonyServices = $dayServicesAll->filter(function($service) {
-            return in_array($service->service_type, ['ceremony', 'ceremory']) || 
-                   str_contains(strtolower($service->service_type ?? ''), 'ceremony') ||
-                   str_contains(strtolower($service->service_type ?? ''), 'birthday') ||
-                   str_contains(strtolower($service->service_type ?? ''), 'package');
+        $ceremonyServices = $dayServicesAll->filter(function ($service) {
+            return in_array($service->service_type, ['ceremony', 'ceremory']) ||
+                str_contains(strtolower($service->service_type ?? ''), 'ceremony') ||
+                str_contains(strtolower($service->service_type ?? ''), 'birthday') ||
+                str_contains(strtolower($service->service_type ?? ''), 'package');
         });
 
         $dayServicesByType = [
             'swimming' => [
                 'total' => $swimmingServices->count(),
                 'paid' => $swimmingServices->where('payment_status', 'paid')->count(),
-                'revenue' => $swimmingServices->where('payment_status', 'paid')->sum(function($s) use ($exchangeRate) {
+                'revenue' => $swimmingServices->where('payment_status', 'paid')->sum(function ($s) use ($exchangeRate) {
                     return $s->guest_type === 'tanzanian' ? ($s->amount_paid ?? $s->amount ?? 0) : (($s->amount_paid ?? $s->amount ?? 0) * ($s->exchange_rate ?? $exchangeRate));
                 }),
             ],
             'swimming_with_bucket' => [
                 'total' => $swimmingWithBucketServices->count(),
                 'paid' => $swimmingWithBucketServices->where('payment_status', 'paid')->count(),
-                'revenue' => $swimmingWithBucketServices->where('payment_status', 'paid')->sum(function($s) use ($exchangeRate) {
+                'revenue' => $swimmingWithBucketServices->where('payment_status', 'paid')->sum(function ($s) use ($exchangeRate) {
                     return $s->guest_type === 'tanzanian' ? ($s->amount_paid ?? $s->amount ?? 0) : (($s->amount_paid ?? $s->amount ?? 0) * ($s->exchange_rate ?? $exchangeRate));
                 }),
             ],
             'ceremony' => [
                 'total' => $ceremonyServices->count(),
                 'paid' => $ceremonyServices->where('payment_status', 'paid')->count(),
-                'revenue' => $ceremonyServices->where('payment_status', 'paid')->sum(function($s) use ($exchangeRate) {
+                'revenue' => $ceremonyServices->where('payment_status', 'paid')->sum(function ($s) use ($exchangeRate) {
                     return $s->guest_type === 'tanzanian' ? ($s->amount_paid ?? $s->amount ?? 0) : (($s->amount_paid ?? $s->amount ?? 0) * ($s->exchange_rate ?? $exchangeRate));
                 }),
             ],
@@ -916,12 +927,13 @@ class AdminController extends Controller
 
         // Calculate total revenue (bookings + day services + service requests)
         $totalRevenueAll = $totalRevenueTZS + $dayServicesRevenue + $serviceRequests['revenue'];
+        $totalRevenueUSD = $exchangeRate > 0 ? ($totalRevenueTZS / $exchangeRate) : 0;
 
         // Calculate statistics first (needed for recommendations)
         $totalBookingsCount = $bookings->count();
         $confirmedBookingsCount = $bookings->where('status', 'confirmed')->count();
         $cancelledBookingsCount = $bookings->where('status', 'cancelled')->count();
-        
+
         $stats = [
             'total_bookings' => $totalBookingsCount,
             'confirmed_bookings' => $confirmedBookingsCount,
@@ -940,7 +952,7 @@ class AdminController extends Controller
 
         // Generate recommendations based on data
         $recommendations = [];
-        
+
         if ($occupancyRate < 50) {
             $recommendations[] = [
                 'type' => 'warning',
@@ -949,7 +961,7 @@ class AdminController extends Controller
                 'message' => "Current occupancy rate is {$occupancyRate}%. Consider promotional offers or marketing campaigns to increase bookings.",
             ];
         }
-        
+
         if ($cancelledBookingsCount > 0 && $totalBookingsCount > 0 && ($cancelledBookingsCount / $totalBookingsCount) > 0.2) {
             $cancellationRate = round(($cancelledBookingsCount / $totalBookingsCount) * 100, 1);
             $recommendations[] = [
@@ -959,7 +971,7 @@ class AdminController extends Controller
                 'message' => "Cancellation rate is {$cancellationRate}%. Review booking policies and guest communication to reduce cancellations.",
             ];
         }
-        
+
         if (isset($dayServicesStats['total']) && $dayServicesStats['total'] > 0 && isset($dayServicesStats['paid']) && ($dayServicesStats['paid'] / $dayServicesStats['total']) < 0.8) {
             $paymentRate = round(($dayServicesStats['paid'] / $dayServicesStats['total']) * 100, 1);
             $recommendations[] = [
@@ -969,7 +981,7 @@ class AdminController extends Controller
                 'message' => "Only {$paymentRate}% of day services are paid. Focus on collecting pending payments to improve cash flow.",
             ];
         }
-        
+
         if (isset($serviceRequests['pending']) && $serviceRequests['pending'] > 0 && isset($serviceRequests['completed']) && $serviceRequests['pending'] > $serviceRequests['completed']) {
             $recommendations[] = [
                 'type' => 'warning',
@@ -978,7 +990,7 @@ class AdminController extends Controller
                 'message' => "You have {$serviceRequests['pending']} pending service requests. Prioritize completing service requests to improve guest satisfaction.",
             ];
         }
-        
+
         if ($monthRevenueTZS < $lastMonthRevenueTZS && $lastMonthRevenueTZS > 0) {
             $revenueChange = round((($monthRevenueTZS - $lastMonthRevenueTZS) / $lastMonthRevenueTZS) * 100, 1);
             $recommendations[] = [
@@ -988,7 +1000,7 @@ class AdminController extends Controller
                 'message' => "Monthly revenue decreased by {$revenueChange}% compared to last month. Analyze booking patterns and adjust pricing strategy.",
             ];
         }
-        
+
         if (empty($recommendations)) {
             $recommendations[] = [
                 'type' => 'success',
@@ -1023,14 +1035,14 @@ class AdminController extends Controller
             'dateRange' => $dateRange,
         ]);
     }
-    
+
     /**
      * Calculate date range based on report type
      */
     private function calculateDateRange($reportType, $reportDate = null, $startDate = null, $endDate = null)
     {
         $today = Carbon::today();
-        
+
         switch ($reportType) {
             case 'daily':
                 $date = $reportDate ? Carbon::parse($reportDate) : $today;
@@ -1039,7 +1051,7 @@ class AdminController extends Controller
                     'end' => $date->copy()->endOfDay(),
                     'label' => $date->format('F d, Y')
                 ];
-                
+
             case 'weekly':
                 $date = $reportDate ? Carbon::parse($reportDate) : $today;
                 return [
@@ -1047,7 +1059,7 @@ class AdminController extends Controller
                     'end' => $date->copy()->endOfWeek(),
                     'label' => $date->copy()->startOfWeek()->format('M d') . ' - ' . $date->copy()->endOfWeek()->format('M d, Y')
                 ];
-                
+
             case 'monthly':
                 $date = $reportDate ? Carbon::parse($reportDate) : $today;
                 return [
@@ -1055,7 +1067,7 @@ class AdminController extends Controller
                     'end' => $date->copy()->endOfMonth(),
                     'label' => $date->format('F Y')
                 ];
-                
+
             case 'yearly':
                 $date = $reportDate ? Carbon::parse($reportDate) : $today;
                 return [
@@ -1063,7 +1075,7 @@ class AdminController extends Controller
                     'end' => $date->copy()->endOfYear(),
                     'label' => $date->format('Y')
                 ];
-                
+
             case 'custom':
                 $start = $startDate ? Carbon::parse($startDate)->startOfDay() : $today->copy()->subDays(30);
                 $end = $endDate ? Carbon::parse($endDate)->endOfDay() : $today;
@@ -1072,7 +1084,7 @@ class AdminController extends Controller
                     'end' => $end,
                     'label' => $start->format('M d, Y') . ' - ' . $end->format('M d, Y')
                 ];
-                
+
             default:
                 // Default to last 30 days
                 return [
@@ -1082,7 +1094,7 @@ class AdminController extends Controller
                 ];
         }
     }
-    
+
     /**
      * Display WiFi settings page
      */
@@ -1105,7 +1117,7 @@ class AdminController extends Controller
             'hotelWifiPassword' => $hotelWifiPassword,
         ]);
     }
-    
+
     /**
      * Update WiFi settings
      */
@@ -1150,7 +1162,7 @@ class AdminController extends Controller
             ], 500);
         }
     }
-    
+
     /**
      * Update room-specific WiFi settings
      */
@@ -1170,7 +1182,7 @@ class AdminController extends Controller
             'message' => 'Room WiFi settings updated successfully.',
         ]);
     }
-    
+
     /**
      * Display hotel settings page
      */
@@ -1185,8 +1197,8 @@ class AdminController extends Controller
             'settings' => $settings,
         ]);
     }
-    
-    
+
+
     /**
      * Display room settings page
      */
@@ -1198,17 +1210,17 @@ class AdminController extends Controller
         $allAmenities = collect();
         foreach ($rooms as $room) {
             if ($room->amenities) {
-                $amenities = is_array($room->amenities) 
-                    ? $room->amenities 
-                    : (json_decode($room->amenities, true) ?? []);
-                
+                $amenities = is_array($room->amenities)
+                    ? $room->amenities
+                    : (is_string($room->amenities) ? (json_decode($room->amenities, true) ?? []) : []);
+
                 if (is_array($amenities)) {
                     $allAmenities = $allAmenities->merge($amenities);
                 }
             }
         }
         // Get unique amenities and sort them
-        $allAmenities = $allAmenities->unique()->filter(function($amenity) {
+        $allAmenities = $allAmenities->unique()->filter(function ($amenity) {
             return !empty($amenity) && $amenity !== 'null' && $amenity !== 'undefined';
         })->values()->sort()->values();
 
@@ -1220,7 +1232,7 @@ class AdminController extends Controller
             'allAmenities' => $allAmenities,
         ]);
     }
-    
+
     /**
      * Display pricing settings page
      */
@@ -1235,7 +1247,7 @@ class AdminController extends Controller
             'rooms' => $rooms,
         ]);
     }
-    
+
     /**
      * Display feedback analysis page
      */
@@ -1247,14 +1259,14 @@ class AdminController extends Controller
 
         // Calculate total feedbacks
         $totalFeedbacks = Feedback::count();
-        
+
         // Calculate average rating
         $averageRating = Feedback::avg('rating') ?? 0;
         $averageRating = round($averageRating, 1);
-        
+
         // Get recent feedbacks (last 30 days)
         $recentFeedbacks = Feedback::where('created_at', '>=', Carbon::now()->subDays(30))->get();
-        
+
         // Rating distribution (1-5 stars)
         $ratingDistribution = [
             5 => Feedback::where('rating', 5)->count(),
@@ -1263,7 +1275,7 @@ class AdminController extends Controller
             2 => Feedback::where('rating', 2)->count(),
             1 => Feedback::where('rating', 1)->count(),
         ];
-        
+
         // Calculate category averages
         $allFeedbacks = Feedback::whereNotNull('categories')->get();
         $categoryTotals = [
@@ -1278,7 +1290,7 @@ class AdminController extends Controller
             'cleanliness' => 0,
             'value' => 0,
         ];
-        
+
         foreach ($allFeedbacks as $feedback) {
             if ($feedback->categories && is_array($feedback->categories)) {
                 foreach (['room_quality', 'service', 'cleanliness', 'value'] as $category) {
@@ -1289,25 +1301,25 @@ class AdminController extends Controller
                 }
             }
         }
-        
+
         $categoryAverages = [
             'room_quality' => $categoryCounts['room_quality'] > 0 ? round($categoryTotals['room_quality'] / $categoryCounts['room_quality'], 1) : 0,
             'service' => $categoryCounts['service'] > 0 ? round($categoryTotals['service'] / $categoryCounts['service'], 1) : 0,
             'cleanliness' => $categoryCounts['cleanliness'] > 0 ? round($categoryTotals['cleanliness'] / $categoryCounts['cleanliness'], 1) : 0,
             'value' => $categoryCounts['value'] > 0 ? round($categoryTotals['value'] / $categoryCounts['value'], 1) : 0,
         ];
-        
+
         // Calculate monthly trend (last 6 months)
         $monthlyTrend = [];
         for ($i = 5; $i >= 0; $i--) {
             $monthStart = Carbon::now()->subMonths($i)->startOfMonth();
             $monthEnd = Carbon::now()->subMonths($i)->endOfMonth();
             $monthName = $monthStart->format('M Y');
-            
+
             $monthFeedbacks = Feedback::whereBetween('created_at', [$monthStart, $monthEnd])->get();
             $monthCount = $monthFeedbacks->count();
             $monthAverage = $monthCount > 0 ? round($monthFeedbacks->avg('rating'), 1) : 0;
-            
+
             $monthlyTrend[$monthName] = [
                 'count' => $monthCount,
                 'average' => $monthAverage,
@@ -1327,7 +1339,7 @@ class AdminController extends Controller
             'monthlyTrend' => $monthlyTrend,
         ]);
     }
-    
+
     /**
      * Display services management page
      */
@@ -1342,7 +1354,7 @@ class AdminController extends Controller
             'services' => $services,
         ]);
     }
-    
+
     /**
      * Show service form (create/edit)
      */
@@ -1357,7 +1369,7 @@ class AdminController extends Controller
             'service' => $service,
         ]);
     }
-    
+
     /**
      * Show the form for creating a new service
      */
@@ -1370,7 +1382,7 @@ class AdminController extends Controller
             'service' => null,
         ]);
     }
-    
+
     /**
      * Update Hotel Settings
      */
@@ -1383,30 +1395,30 @@ class AdminController extends Controller
             'hotel_phone' => 'nullable|string|max:50',
             'hotel_email' => 'nullable|email|max:255',
             'hotel_website' => 'nullable|url|max:255',
-            
+
             // Check-in/Check-out Times
             'default_checkin_time' => 'nullable|date_format:H:i',
             'default_checkout_time' => 'nullable|date_format:H:i',
-            
+
             // Booking Settings
             'min_stay_nights' => 'nullable|integer|min:1',
             'max_stay_nights' => 'nullable|integer|min:1',
             'booking_expiration_hours' => 'nullable|integer|min:1',
             'auto_cancel_unpaid' => 'nullable|boolean',
-            
+
             // Policies
             'cancellation_policy' => 'nullable|string',
             'terms_conditions' => 'nullable|string',
             'privacy_policy' => 'nullable|string',
-            
+
             // Contact Information
             'support_email' => 'nullable|email|max:255',
             'support_phone' => 'nullable|string|max:50',
-            
+
             // Currency & Exchange
             'base_currency' => 'nullable|string|max:10',
             'exchange_rate_usd_to_tzs' => 'nullable|numeric|min:0',
-            
+
             // Tax & Fees
             'tax_rate_percentage' => 'nullable|numeric|min:0|max:100',
             'service_charge_percentage' => 'nullable|numeric|min:0|max:100',
@@ -1430,7 +1442,7 @@ class AdminController extends Controller
         return redirect()->route('admin.settings.hotel')
             ->with('success', 'Hotel settings updated successfully.');
     }
-    
+
 
     /**
      * Update Room Settings
@@ -1441,23 +1453,23 @@ class AdminController extends Controller
             // Default Times
             'default_room_checkin_time' => 'nullable|date_format:H:i',
             'default_room_checkout_time' => 'nullable|date_format:H:i',
-            
+
             // Default Amenities
             'default_amenities' => 'nullable|array',
             'default_amenities.*' => 'string|max:255',
-            
+
             // Room Status Rules
             'auto_update_status_after_checkout' => 'nullable|boolean',
             'auto_maintenance_after_days' => 'nullable|integer|min:0',
-            
+
             // Cleaning Settings
             'default_cleaning_duration_hours' => 'nullable|numeric|min:0|max:24',
             'auto_cleaning_status' => 'nullable|boolean',
-            
+
             // Maintenance Settings
             'maintenance_duration_hours' => 'nullable|numeric|min:0|max:168',
             'auto_maintenance_trigger' => 'nullable|boolean',
-            
+
             // Default Pricing by Room Type
             'default_price_single' => 'nullable|numeric|min:0',
             'default_price_double' => 'nullable|numeric|min:0',
@@ -1495,17 +1507,17 @@ class AdminController extends Controller
             // Exchange Rate
             'exchange_rate_usd_to_tzs' => 'nullable|numeric|min:0',
             'auto_update_exchange_rate' => 'nullable|boolean',
-            
+
             // Tax Rates
             'vat_percentage' => 'nullable|numeric|min:0|max:100',
             'service_tax_percentage' => 'nullable|numeric|min:0|max:100',
             'city_tax_percentage' => 'nullable|numeric|min:0|max:100',
-            
+
             // Service Charges
             'service_charge_type' => 'nullable|in:percentage,fixed',
             'service_charge_percentage' => 'nullable|numeric|min:0|max:100',
             'service_charge_fixed' => 'nullable|numeric|min:0',
-            
+
             // Season Management
             'peak_season_start_month' => 'nullable|integer|min:1|max:12',
             'peak_season_start_day' => 'nullable|integer|min:1|max:31',
@@ -1513,7 +1525,7 @@ class AdminController extends Controller
             'peak_season_end_day' => 'nullable|integer|min:1|max:31',
             'peak_season_multiplier' => 'nullable|numeric|min:1',
             'off_season_multiplier' => 'nullable|numeric|min:0|max:1',
-            
+
             // Discount Rules
             'early_bird_discount_percentage' => 'nullable|numeric|min:0|max:100',
             'early_bird_days_advance' => 'nullable|integer|min:1',
@@ -1521,7 +1533,7 @@ class AdminController extends Controller
             'long_stay_min_nights' => 'nullable|integer|min:1',
             'last_minute_discount_percentage' => 'nullable|numeric|min:0|max:100',
             'last_minute_max_days' => 'nullable|integer|min:1',
-            
+
             // Dynamic Pricing
             'weekend_multiplier' => 'nullable|numeric|min:1',
             'holiday_multiplier' => 'nullable|numeric|min:1',
@@ -1594,10 +1606,10 @@ class AdminController extends Controller
                         'name' => $field['name'],
                         'label' => $field['label'],
                         'type' => $field['type'] ?? 'text',
-                        'required' => isset($field['required']) ? (bool)$field['required'] : false,
+                        'required' => isset($field['required']) ? (bool) $field['required'] : false,
                         'placeholder' => $field['placeholder'] ?? null,
-                        'min' => isset($field['min']) ? (int)$field['min'] : null,
-                        'max' => isset($field['max']) ? (int)$field['max'] : null,
+                        'min' => isset($field['min']) ? (int) $field['min'] : null,
+                        'max' => isset($field['max']) ? (int) $field['max'] : null,
                         'default' => $field['default'] ?? null,
                     ];
                 }
@@ -1685,10 +1697,10 @@ class AdminController extends Controller
                         'name' => $field['name'],
                         'label' => $field['label'],
                         'type' => $field['type'] ?? 'text',
-                        'required' => isset($field['required']) ? (bool)$field['required'] : false,
+                        'required' => isset($field['required']) ? (bool) $field['required'] : false,
                         'placeholder' => $field['placeholder'] ?? null,
-                        'min' => isset($field['min']) ? (int)$field['min'] : null,
-                        'max' => isset($field['max']) ? (int)$field['max'] : null,
+                        'min' => isset($field['min']) ? (int) $field['min'] : null,
+                        'max' => isset($field['max']) ? (int) $field['max'] : null,
                         'default' => $field['default'] ?? null,
                     ];
                 }
@@ -1751,11 +1763,11 @@ class AdminController extends Controller
     {
         $dateType = $request->get('date_type', 'daily');
         $customDate = $request->get('date', now()->format('Y-m-d'));
-        
+
         // precise date filtering
         $startDate = now();
         $endDate = now();
-        
+
         switch ($dateType) {
             case 'daily':
                 $startDate = \Carbon\Carbon::parse($customDate)->startOfDay();
@@ -1774,7 +1786,7 @@ class AdminController extends Controller
                 $endDate = \Carbon\Carbon::parse($customDate)->endOfYear();
                 break;
         }
-        
+
         // 1. Received Stock (Transfers In - Global)
         // We look for transfers received by ANYONE (or ideally filter by bar/restaurant staff if needed, for now all completed transfers logic)
         $receivedTransfers = \App\Models\StockTransfer::with(['product', 'productVariant', 'receivedBy'])
@@ -1782,13 +1794,13 @@ class AdminController extends Controller
             ->whereBetween('received_at', [$startDate, $endDate])
             ->orderBy('received_at', 'desc')
             ->get();
-            
+
         $totalReceivedBottles = 0;
         $totalReceivedCrates = 0; // Approximate
-        
+
         foreach ($receivedTransfers as $transfer) {
             $itemsPerPackage = $transfer->productVariant->items_per_package ?? 1;
-            
+
             if ($transfer->quantity_unit === 'packages') {
                 $bottles = $transfer->quantity_transferred * $itemsPerPackage;
                 $totalReceivedCrates += $transfer->quantity_transferred;
@@ -1799,52 +1811,52 @@ class AdminController extends Controller
                 $totalReceivedCrates += ($transfer->quantity_transferred / $itemsPerPackage);
             }
         }
-        
+
         // 2. Sold Items (Service Requests - Global Restaurant/Bar)
         // We filter by valid bar/restaurant categories
         $barCategories = ['alcoholic_beverage', 'non_alcoholic_beverage', 'water', 'juices', 'energy_drinks'];
         $kitchenCategories = ['food', 'restaurant'];
-        
+
         $staffUser = auth()->guard('staff')->user();
         $isHeadChef = $staffUser && ($staffUser->registration_id === 'HEADCHEF' || \App\Services\RolePermissionService::hasRole($staffUser, 'head_chef'));
         $targetCategories = $isHeadChef ? $kitchenCategories : array_merge($barCategories, $kitchenCategories);
 
         $soldOrders = \App\Models\ServiceRequest::with(['service', 'booking', 'approvedBy'])
-            ->whereHas('service', function($q) use ($targetCategories) {
+            ->whereHas('service', function ($q) use ($targetCategories) {
                 $q->whereIn('category', $targetCategories);
             })
             ->where('status', 'completed')
             // Filter by completion time (sales time)
-            ->whereBetween('completed_at', [$startDate, $endDate]) 
+            ->whereBetween('completed_at', [$startDate, $endDate])
             ->orderBy('completed_at', 'desc')
             ->get();
-            
+
         $totalSoldItems = $soldOrders->sum('quantity');
         $totalRevenue = $soldOrders->sum('total_price_tsh');
-        
+
         // 3. Issues / Expired / Broken (Global)
         $issues = \App\Models\IssueReport::with('user')
             ->whereBetween('created_at', [$startDate, $endDate])
             ->whereIn('issue_type', ['expired', 'damage']) // Only stock related issues
             ->get();
-            
-        $totalExpired = $issues->where('issue_type', 'expired')->count(); 
+
+        $totalExpired = $issues->where('issue_type', 'expired')->count();
         $totalBroken = $issues->where('issue_type', 'damage')->count();
-        
+
         // 4. Physical Stock (Global Calculated)
         // We fetch ALL completed transfers EVER (to get total IN)
         // and ALL completed sales EVER (to get total OUT)
         // Then we match them by name to estimate current stock.
-        
+
         $allTransfers = \App\Models\StockTransfer::with(['product', 'productVariant'])
             ->where('status', 'completed')
             ->get();
-            
+
         $stockMap = [];
-        
+
         foreach ($allTransfers as $transfer) {
             $key = $transfer->product_id . '_' . $transfer->product_variant_id;
-            
+
             if (!isset($stockMap[$key])) {
                 $stockMap[$key] = [
                     'product_id' => $transfer->product_id,
@@ -1857,33 +1869,33 @@ class AdminController extends Controller
                     'current_stock' => 0,
                 ];
             }
-            
+
             // Normalize to bottles/items
             $itemsPerPackage = $transfer->productVariant->items_per_package ?? 1;
-            $quantity = ($transfer->quantity_unit === 'packages') 
-                ? $transfer->quantity_transferred * $itemsPerPackage 
+            $quantity = ($transfer->quantity_unit === 'packages')
+                ? $transfer->quantity_transferred * $itemsPerPackage
                 : $transfer->quantity_transferred;
-                
+
             $stockMap[$key]['total_received'] += $quantity;
         }
-        
+
         // All sales for estimation
         $allSales = \App\Models\ServiceRequest::with('service')
-            ->whereHas('service', function($q) use ($barCategories, $kitchenCategories) {
+            ->whereHas('service', function ($q) use ($barCategories, $kitchenCategories) {
                 $q->whereIn('category', array_merge($barCategories, $kitchenCategories));
             })
             ->where('status', 'completed')
             ->get();
-            
+
         foreach ($allSales as $sale) {
             $metadata = $sale->service_specific_data;
             // Use the most specific name available
             $serviceName = strtolower($metadata['item_name'] ?? $sale->service->name ?? '');
-            
+
             foreach ($stockMap as $key => &$stockItem) {
                 $productName = strtolower($stockItem['product_name']);
                 $variantName = strtolower($stockItem['variant_name']);
-                
+
                 // Matches if service name contains both product and variant (e.g., "Coca Cola 600ml")
                 // Or if it's a direct match to product name
                 if (str_contains($serviceName, $productName)) {
@@ -1901,28 +1913,28 @@ class AdminController extends Controller
                 }
             }
         }
-        
+
         // Calculate balance
         foreach ($stockMap as &$item) {
             $item['current_stock'] = $item['total_received'] - $item['total_sold'];
         }
-        
+
         $physicalStock = collect($stockMap)->sortBy('product_name');
-        
+
         // 5. Ingredient Tracking (Consumption from Recipes)
         $ingredientConsumption = DB::table('recipe_consumptions')
             ->join('products', 'recipe_consumptions.product_id', '=', 'products.id')
             ->whereBetween('recipe_consumptions.created_at', [$startDate, $endDate])
             ->select(
                 'products.id as product_id',
-                'products.name', 
-                'recipe_consumptions.unit', 
+                'products.name',
+                'recipe_consumptions.unit',
                 DB::raw('SUM(quantity_consumed) as total_consumed')
             )
             ->groupBy('products.id', 'products.name', 'recipe_consumptions.unit')
             ->orderBy('products.name')
             ->get();
-            
+
         // Calculate available stock for consumed ingredients
         foreach ($ingredientConsumption as $ingredient) {
             // Get total received from stock receipts
@@ -1937,7 +1949,7 @@ class AdminController extends Controller
                 ->where('is_purchased', true)
                 ->sum('purchased_quantity');
 
-            $totalReceived = (float)$receiptsReceived + (float)$shoppingListReceived;
+            $totalReceived = (float) $receiptsReceived + (float) $shoppingListReceived;
 
             // Get total consumed (all time)
             $totalConsumed = DB::table('recipe_consumptions')
@@ -1946,16 +1958,16 @@ class AdminController extends Controller
 
             $ingredient->available_stock = max(0, $totalReceived - $totalConsumed);
         }
-        
+
         // 6. All Kitchen Ingredients Inventory (regardless of usage)
         $allKitchenIngredients = DB::table('products')
-            ->where(function($q) {
+            ->where(function ($q) {
                 $q->where('category', 'food')
-                  ->orWhere('type', 'kitchen');
+                    ->orWhere('type', 'kitchen');
             })
             ->orderBy('name')
             ->get()
-            ->map(function($product) {
+            ->map(function ($product) {
                 // Get total received from stock receipts
                 $receiptsReceived = DB::table('stock_receipts')
                     ->join('product_variants', 'stock_receipts.product_variant_id', '=', 'product_variants.id')
@@ -1969,7 +1981,7 @@ class AdminController extends Controller
                     ->where('is_purchased', true)
                     ->sum('purchased_quantity');
 
-                $totalReceived = (float)$receiptsReceived + (float)$shoppingListReceived;
+                $totalReceived = (float) $receiptsReceived + (float) $shoppingListReceived;
 
                 // Get total consumed
                 $totalConsumed = DB::table('recipe_consumptions')
@@ -1980,10 +1992,10 @@ class AdminController extends Controller
                 $variant = DB::table('product_variants')
                     ->where('product_id', $product->id)
                     ->first();
-                
+
                 $unit = $variant ? $variant->measurement : 'units';
 
-                return (object)[
+                return (object) [
                     'name' => $product->name,
                     'category' => $product->category_name ?? 'Kitchen',
                     'total_received' => $totalReceived,
@@ -1993,17 +2005,17 @@ class AdminController extends Controller
                     'image' => $product->image
                 ];
             })
-            ->filter(function($item) {
+            ->filter(function ($item) {
                 // Only show items that have been received at least once
                 return $item->total_received > 0;
             });
-            
+
         $staffUser = auth()->guard('staff')->user();
         $userName = $staffUser->name ?? 'Guest';
         $userRole = 'Staff';
-        
+
         if ($staffUser) {
-            $userRole = match($staffUser->role) {
+            $userRole = match ($staffUser->role) {
                 'manager' => 'Manager',
                 'reception' => 'Receptionist',
                 'head_chef' => 'Head Chef',
@@ -2038,17 +2050,17 @@ class AdminController extends Controller
     public function stock(Request $request)
     {
         $barCategories = ['alcoholic_beverage', 'non_alcoholic_beverage', 'water', 'juices', 'energy_drinks', 'food', 'restaurant'];
-        
+
         // Fetch ALL completed transfers (Global IN to Bar)
         $allTransfers = StockTransfer::with(['product', 'productVariant'])
             ->where('status', 'completed')
             ->get();
-            
+
         $stockMap = [];
-        
+
         foreach ($allTransfers as $transfer) {
             $key = $transfer->product_id . '_' . $transfer->product_variant_id;
-            
+
             if (!isset($stockMap[$key])) {
                 $stockMap[$key] = [
                     'product_id' => $transfer->product_id,
@@ -2066,27 +2078,27 @@ class AdminController extends Controller
                     'selling_price' => 0,
                 ];
             }
-            
+
             $itemsPerPackage = $transfer->productVariant->items_per_package ?? 1;
-            $quantity = ($transfer->quantity_unit === 'packages') 
-                ? $transfer->quantity_transferred * $itemsPerPackage 
+            $quantity = ($transfer->quantity_unit === 'packages')
+                ? $transfer->quantity_transferred * $itemsPerPackage
                 : $transfer->quantity_transferred;
-                
+
             $stockMap[$key]['total_received'] += $quantity;
         }
-        
+
         // Fetch ALL sales (Global OUT)
         $allSales = \App\Models\ServiceRequest::with('service')
-            ->whereHas('service', function($q) use ($barCategories) {
+            ->whereHas('service', function ($q) use ($barCategories) {
                 $q->whereIn('category', $barCategories);
             })
             ->where('status', 'completed')
             ->get();
-            
+
         foreach ($allSales as $sale) {
             $meta = $sale->service_specific_data;
             $matched = false;
-            
+
             // 1. Precise match using product/variant IDs (Preferred)
             if (isset($meta['product_id']) && isset($meta['product_variant_id'])) {
                 $key = $meta['product_id'] . '_' . $meta['product_variant_id'];
@@ -2094,28 +2106,30 @@ class AdminController extends Controller
                     $stockMap[$key]['total_sold'] += $sale->quantity;
                     $stockItem = &$stockMap[$key];
                     $stockItem['generated_revenue'] += $sale->total_price_tsh;
-                    
+
                     if ($stockItem['selling_price'] == 0 && $sale->service) {
                         $stockItem['selling_price'] = $sale->unit_price_tsh;
                     }
                     $matched = true;
                 }
             }
-            
+
             // 2. Fuzzy match fallback
             if (!$matched) {
                 $serviceName = strtolower($sale->service->name ?? '');
                 $itemName = strtolower($meta['item_name'] ?? '');
-                
+
                 foreach ($stockMap as $key => &$stockItem) {
                     $productName = strtolower($stockItem['product_name']);
-                    
-                    if (($itemName && str_contains($itemName, $productName)) || 
-                        ($serviceName && str_contains($serviceName, $productName)) || 
-                        str_contains($productName, $serviceName)) {
+
+                    if (
+                        ($itemName && str_contains($itemName, $productName)) ||
+                        ($serviceName && str_contains($serviceName, $productName)) ||
+                        str_contains($productName, $serviceName)
+                    ) {
                         $stockItem['total_sold'] += $sale->quantity;
                         $stockItem['generated_revenue'] += $sale->total_price_tsh;
-                        
+
                         if ($stockItem['selling_price'] == 0) {
                             $stockItem['selling_price'] = $sale->unit_price_tsh;
                         }
@@ -2123,31 +2137,31 @@ class AdminController extends Controller
                 }
             }
         }
-        
+
         // Fallback for selling price from Receipts
         foreach ($stockMap as $key => &$stockItem) {
             if ($stockItem['selling_price'] == 0) {
-                 $latestReceipt = \App\Models\StockReceipt::where('product_id', $stockItem['product_id'])
+                $latestReceipt = \App\Models\StockReceipt::where('product_id', $stockItem['product_id'])
                     ->where('product_variant_id', $stockItem['variant_id'])
                     ->orderBy('received_date', 'desc')
                     ->first();
-                    
-                 if ($latestReceipt) {
-                     $stockItem['selling_price'] = $latestReceipt->selling_price_per_bottle;
-                 }
+
+                if ($latestReceipt) {
+                    $stockItem['selling_price'] = $latestReceipt->selling_price_per_bottle;
+                }
             }
         }
-        
+
         // Calculate breakdown
         foreach ($stockMap as &$item) {
             $item['current_stock'] = $item['total_received'] - $item['total_sold'];
-            
+
             $itemsPerPkg = $item['items_per_package'] > 0 ? $item['items_per_package'] : 1;
-            
+
             if ($itemsPerPkg > 1) {
                 $crates = floor($item['current_stock'] / $itemsPerPkg);
                 $bottles = $item['current_stock'] % $itemsPerPkg;
-                
+
                 $item['stock_breakdown'] = "{$crates} " . ucfirst($item['packaging']);
                 if ($bottles > 0) {
                     $item['stock_breakdown'] .= " & {$bottles} Bottles";
@@ -2158,9 +2172,9 @@ class AdminController extends Controller
                 $item['total_bottles_display'] = "";
             }
         }
-        
+
         $allStock = collect($stockMap)->sortBy('product_name');
-        
+
         return view('dashboard.admin-stock', compact('allStock'));
     }
 }

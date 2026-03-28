@@ -25,16 +25,16 @@ class DayServiceController extends Controller
     {
         $user = Auth::guard('staff')->user();
         $role = strtolower($user->role ?? '');
-        
+
         // Get pre-selected service type from query parameter
         $selectedServiceType = $request->query('service_type');
-        
+
         // Get active services from catalog
         $services = \App\Models\ServiceCatalog::active()
             ->orderBy('display_order')
             ->orderBy('service_name')
             ->get();
-        
+
         // If swimming is selected and service exists, check if we should redirect to dedicated page
         if ($selectedServiceType === 'swimming') {
             $swimmingService = $services->where('service_key', 'swimming')->first();
@@ -42,157 +42,86 @@ class DayServiceController extends Controller
                 // Check if Service model has adult/child pricing for swimming
                 $serviceModel = \App\Models\Service::where('name', 'LIKE', '%swimming%')
                     ->where('is_active', true)
-                    ->where(function($q) {
+                    ->where(function ($q) {
                         $q->where('age_group', 'both')
-                          ->orWhere('age_group', 'adult');
+                            ->orWhere('age_group', 'adult');
                     })
                     ->first();
-                
+
                 // Only redirect if Service model exists with adult/child pricing
                 if ($serviceModel && $serviceModel->age_group === 'both' && $serviceModel->child_price_tsh && $serviceModel->child_price_tsh > 0) {
                     return redirect()->route($role === 'reception' ? 'reception.day-services.swimming.create' : 'admin.day-services.swimming.create');
                 }
             }
         }
-        
+
         // Get Service model pricing for swimming services (if available)
         $serviceModel = null;
         if ($selectedServiceType === 'swimming' || $selectedServiceType === 'swimming_with_bucket' || $selectedServiceType === 'swimming-with-bucket') {
             $serviceModel = \App\Models\Service::where('name', 'LIKE', '%swimming%')
                 ->where('is_active', true)
-                ->where(function($q) {
+                ->where(function ($q) {
                     $q->where('age_group', 'both')
-                      ->orWhere('age_group', 'adult');
+                        ->orWhere('age_group', 'adult');
                 })
                 ->first();
         }
-        
+
         return view('dashboard.day-service-register', compact('role', 'services', 'selectedServiceType', 'serviceModel'));
     }
 
     /**
-     * Show swimming service registration page (handles both Swimming and Swimming with Bucket)
+     * Show parking service registration page
      */
-    public function swimmingService()
+    public function parkingService()
     {
         $user = Auth::guard('staff')->user();
         $role = strtolower($user->role ?? 'manager');
-        
-        // Get swimming services from catalog (both swimming and swimming_with_bucket)
-        $swimmingServices = \App\Models\ServiceCatalog::whereIn('service_key', ['swimming', 'swimming_with_bucket', 'swimming-with-bucket', 'swimming_with_floating_trey'])
-            ->where('is_active', true)
-            ->orderBy('display_order')
-            ->get();
-        
-        if ($swimmingServices->isEmpty()) {
+
+        $parkingService = \App\Models\ServiceCatalog::where('service_key', 'parking')->first();
+
+        if (!$parkingService) {
             return redirect()->route($role === 'reception' ? 'reception.service-catalog.index' : 'admin.service-catalog.index')
-                ->with('error', 'Swimming services are not configured in the catalog. Please register them first.');
+                ->with('error', 'Parking service is not configured in the catalog. Please register it first.');
         }
-        
-        // Get Service models for adult/child pricing
-        $swimmingServiceModel = \App\Models\Service::where('name', 'LIKE', '%swimming%')
-            ->where('name', 'NOT LIKE', '%bucket%')
-            ->where('is_active', true)
-            ->where(function($q) {
-                $q->where('age_group', 'both')
-                  ->orWhere('age_group', 'adult');
-            })
-            ->first();
-        
-        $swimmingWithBucketServiceModel = \App\Models\Service::where('name', 'LIKE', '%swimming%')
-            ->where('name', 'LIKE', '%bucket%')
-            ->where('is_active', true)
-            ->where(function($q) {
-                $q->where('age_group', 'both')
-                  ->orWhere('age_group', 'adult');
-            })
-            ->first();
-        
-        // Get ServiceCatalog pricing as fallback
-        $swimmingCatalog = $swimmingServices->where('service_key', 'swimming')->first();
-        $swimmingWithBucketCatalog = $swimmingServices->whereIn('service_key', ['swimming_with_bucket', 'swimming-with-bucket'])->first();
-        
-        // Get exchange rate
-        try {
-            $exchangeRate = $this->currencyService->getUsdToTshRate();
-        } catch (\Exception $e) {
-            $exchangeRate = 2487.81; // Default fallback rate
-        }
-        
-        return view('dashboard.day-service-swimming-service', compact(
-            'role', 
-            'swimmingServices', 
-            'swimmingServiceModel', 
-            'swimmingWithBucketServiceModel', 
-            'swimmingCatalog',
-            'swimmingWithBucketCatalog',
-            'exchangeRate'
-        ));
+
+        return view('dashboard.day-service-parking', compact('role', 'parkingService'));
     }
 
     /**
-     * Show ceremony service registration page
+     * Show garden service registration page
      */
-    public function ceremonyService()
+    public function gardenService()
     {
         $user = Auth::guard('staff')->user();
         $role = strtolower($user->role ?? 'manager');
-        
-        // Get ceremony package from catalog (check for ceremony, ceremony_package, birthday, ceremory typo, etc.)
-        $ceremonyPackage = \App\Models\ServiceCatalog::where(function($query) {
-                $query->where('service_key', 'LIKE', '%ceremony%')
-                      ->orWhere('service_key', 'LIKE', '%ceremory%') // Common typo: ceremory
-                      ->orWhere('service_key', 'LIKE', '%birthday%')
-                      ->orWhere('service_key', 'LIKE', '%package%');
-            })
-            ->where('is_active', true)
-            ->first();
-        
-        if (!$ceremonyPackage) {
+
+        $gardenService = \App\Models\ServiceCatalog::where('service_key', 'garden')->first();
+
+        if (!$gardenService) {
             return redirect()->route($role === 'reception' ? 'reception.service-catalog.index' : 'admin.service-catalog.index')
-                ->with('error', 'Ceremony package is not configured in the catalog. Please register it first.');
+                ->with('error', 'Garden service is not configured in the catalog. Please register it first.');
         }
-        
-        // Get package items from catalog (if configured)
-        $packageItemsFromCatalog = $ceremonyPackage->package_items ?? [];
-        
-        // Default package items if not configured in catalog
-        $defaultPackageItems = [
-            'food' => 'Food',
-            'swimming' => 'Swimming',
-            'drinks' => 'Drinks',
-            'photos' => 'Photos',
-            'decoration' => 'Decoration'
-        ];
-        
-        // Use catalog items if available, otherwise use defaults
-        $packageItems = [];
-        if (!empty($packageItemsFromCatalog) && is_array($packageItemsFromCatalog)) {
-            // Convert array items to key-value pairs with labels
-            $itemLabels = [
-                'food' => 'Food',
-                'swimming' => 'Swimming',
-                'drinks' => 'Drinks',
-                'photos' => 'Photos',
-                'decoration' => 'Decoration'
-            ];
-            
-            foreach ($packageItemsFromCatalog as $item) {
-                $packageItems[$item] = $itemLabels[$item] ?? ucfirst($item);
-            }
-        } else {
-            // Use default items
-            $packageItems = $defaultPackageItems;
+
+        return view('dashboard.day-service-garden', compact('role', 'gardenService'));
+    }
+
+    /**
+     * Show conference room service registration page
+     */
+    public function conferenceRoomService()
+    {
+        $user = Auth::guard('staff')->user();
+        $role = strtolower($user->role ?? 'manager');
+
+        $conferenceService = \App\Models\ServiceCatalog::where('service_key', 'conference_room')->first();
+
+        if (!$conferenceService) {
+            return redirect()->route($role === 'reception' ? 'reception.service-catalog.index' : 'admin.service-catalog.index')
+                ->with('error', 'Conference room service is not configured in the catalog. Please register it first.');
         }
-        
-        // Get exchange rate
-        try {
-            $exchangeRate = $this->currencyService->getUsdToTshRate();
-        } catch (\Exception $e) {
-            $exchangeRate = 2487.81; // Default fallback rate
-        }
-        
-        return view('dashboard.day-service-ceremony', compact('role', 'ceremonyPackage', 'packageItems', 'exchangeRate'));
+
+        return view('dashboard.day-service-conference', compact('role', 'conferenceService'));
     }
 
     /**
@@ -205,17 +134,24 @@ class DayServiceController extends Controller
         // Fallback to default service types if catalog is empty
         $defaultServiceTypes = ['swimming', 'restaurant', 'bar', 'other'];
         $allowedServiceTypes = !empty($serviceKeys) ? implode(',', $serviceKeys) : implode(',', $defaultServiceTypes);
-        
+
         $validated = $request->validate([
             'service_type' => 'required|string|max:100',
             'guest_name' => 'required|string|max:255',
-            'guest_phone' => 'nullable|string|max:20',
-            'guest_email' => 'nullable|email|max:255',
+            'guest_phone' => 'nullable|string',
+            'guest_email' => 'nullable|email',
+            'vehicle_name' => 'required_if:service_type,parking|nullable|string',
+            'plate_number' => 'required_if:service_type,parking|nullable|string',
+            'organization' => 'nullable|string|max:255',
+            'end_time' => 'nullable|string',
+            'duration' => 'nullable|string',
+            'purpose' => 'nullable|string',
             'number_of_people' => 'required|integer|min:1',
             'adult_quantity' => 'nullable|integer|min:0',
             'child_quantity' => 'nullable|integer|min:0',
             'service_date' => 'required|date',
             'service_time' => 'required',
+            'is_all_day' => 'nullable|boolean',
             'items_ordered' => 'nullable|string',
             'package_items' => 'nullable|string', // Can be JSON string or array
             'amount' => 'required|numeric|min:0',
@@ -231,19 +167,71 @@ class DayServiceController extends Controller
             'discount_amount' => 'nullable|numeric|min:0',
             'discount_reason' => 'nullable|string|max:255',
         ]);
-        
-        // Calculate number_of_people from adult/child quantities if provided
-        if ($request->has('adult_quantity') || $request->has('child_quantity')) {
+
+        // Calculate number_of_people from adult/child quantities        // For swimming services, we sum adult and child quantities
+        $isSwimmingService = str_contains(strtolower($validated['service_type'] ?? ''), 'swimming');
+
+        if ($isSwimmingService && ($request->has('adult_quantity') || $request->has('child_quantity'))) {
             $adultQty = $validated['adult_quantity'] ?? 0;
             $childQty = $validated['child_quantity'] ?? 0;
             $validated['number_of_people'] = $adultQty + $childQty;
-            
-            // Ensure at least 1 person
+
+            // Ensure at least 1 person for swimming
             if ($validated['number_of_people'] < 1) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Please enter at least 1 adult or child.',
                 ], 422);
+            }
+        }
+
+        // Handle parking time-based pricing
+        if ($validated['service_type'] === 'parking') {
+            $parkingConfig = \App\Models\ServiceCatalog::where('service_key', 'parking')->first();
+            if ($parkingConfig) {
+                $isAllDay = $request->has('is_all_day');
+                $serviceTime = $validated['service_time'];
+                $endTime = $validated['end_time'] ?? null;
+                $dayStart = $parkingConfig->day_start_time;
+                $dayEnd = $parkingConfig->day_end_time;
+
+                $priceDay = $parkingConfig->price_tanzanian;
+                $priceNight = $parkingConfig->night_price_tanzanian ?? $priceDay;
+
+                // Robust time parsing using Carbon
+                $parseToMins = function ($t) {
+                    if (!$t)
+                        return null;
+                    try {
+                        $c = \Carbon\Carbon::parse($t);
+                        return $c->hour * 60 + $c->minute;
+                    } catch (\Exception $e) {
+                        return null;
+                    }
+                };
+
+                $startMins = $parseToMins($serviceTime);
+                $endMins = $parseToMins($endTime);
+                $dayStartMins = $parseToMins($dayStart);
+                $dayEndMins = $parseToMins($dayEnd);
+
+                // Check for spanning Day/Night
+                $spansBoth = false;
+                if ($startMins !== null && $endMins !== null && $dayStartMins !== null && $dayEndMins !== null) {
+                    $startInDay = ($startMins >= $dayStartMins && $startMins <= $dayEndMins);
+                    $endInDay = ($endMins >= $dayStartMins && $endMins <= $dayEndMins);
+                    if ($startInDay !== $endInDay) {
+                        $spansBoth = true;
+                    }
+                }
+
+                if ($isAllDay || $spansBoth) {
+                    $unitPrice = $priceDay + $priceNight;
+                } else {
+                    // If it's outside day hours, it's night
+                    $isNight = ($startMins < $dayStartMins || $startMins > $dayEndMins);
+                    $unitPrice = $isNight ? $priceNight : $priceDay;
+                }
             }
         }
 
@@ -282,18 +270,18 @@ class DayServiceController extends Controller
         $packageItems = null;
         if ($request->has('package_items')) {
             $packageItemsData = $request->input('package_items');
-            
+
             // If package_items is a JSON string, decode it
             if (is_string($packageItemsData)) {
                 $packageItemsData = json_decode($packageItemsData, true);
             }
-            
+
             // Ensure it's an array
             if (is_array($packageItemsData)) {
                 $packageItems = $packageItemsData;
             }
         }
-        
+
         // Prepare data
         $serviceData = [
             'service_reference' => $serviceReference,
@@ -301,11 +289,18 @@ class DayServiceController extends Controller
             'guest_name' => $validated['guest_name'],
             'guest_phone' => !empty($validated['guest_phone']) ? (str_starts_with($validated['guest_phone'], '+255') ? $validated['guest_phone'] : '+255' . ltrim($validated['guest_phone'], '0')) : null,
             'guest_email' => $validated['guest_email'] ?? null,
+            'organization' => $validated['organization'] ?? null,
+            'vehicle_name' => $validated['vehicle_name'] ?? null,
+            'plate_number' => $validated['plate_number'] ?? null,
             'number_of_people' => $validated['number_of_people'],
             'adult_quantity' => $validated['adult_quantity'] ?? null,
             'child_quantity' => $validated['child_quantity'] ?? null,
             'service_date' => $validated['service_date'],
             'service_time' => $validated['service_time'],
+            'is_all_day' => $request->has('is_all_day'),
+            'end_time' => $validated['end_time'] ?? null,
+            'duration' => $validated['duration'] ?? null,
+            'purpose' => $validated['purpose'] ?? null,
             'items_ordered' => $validated['items_ordered'] ?? null,
             'package_items' => $packageItems ?? $validated['package_items'] ?? null,
             'amount' => $validated['amount'],
@@ -330,17 +325,23 @@ class DayServiceController extends Controller
         // Generate receipt URL if paid
         $receiptUrl = null;
         if ($dayService->payment_status === 'paid') {
-            $receiptUrl = route('admin.day-services.receipt', $dayService);
+            $rolePrefix = 'admin';
+            if ($staff->role === 'reception') {
+                $rolePrefix = 'reception';
+            } elseif ($staff->role === 'bar-keeper') {
+                $rolePrefix = 'bar-keeper';
+            }
+            $receiptUrl = route($rolePrefix . '.day-services.receipt', $dayService);
         }
 
         // Send email notification if email is provided
         $serviceKey = strtolower($validated['service_type'] ?? '');
-        $isCeremonyService = str_contains($serviceKey, 'ceremony') || 
-                            str_contains($serviceKey, 'ceremory') || 
-                            str_contains($serviceKey, 'birthday') || 
-                            str_contains($serviceKey, 'package');
+        $isCeremonyService = str_contains($serviceKey, 'ceremony') ||
+            str_contains($serviceKey, 'ceremory') ||
+            str_contains($serviceKey, 'birthday') ||
+            str_contains($serviceKey, 'package');
         $isSwimmingService = str_contains($serviceKey, 'swimming');
-        
+
         if (!empty($validated['guest_email'])) {
             try {
                 if ($isCeremonyService) {
@@ -358,8 +359,8 @@ class DayServiceController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => $dayService->payment_status === 'paid' 
-                ? 'Day service registered and receipt generated successfully!' 
+            'message' => $dayService->payment_status === 'paid'
+                ? 'Day service registered and receipt generated successfully!'
                 : 'Day service registered. Payment pending.',
             'day_service' => $dayService,
             'receipt_url' => $receiptUrl,
@@ -379,21 +380,27 @@ class DayServiceController extends Controller
             if ($tab === 'swimming') {
                 $query->where('service_type', 'swimming');
             } elseif ($tab === 'swimming_with_bucket' || $tab === 'swimming-with-bucket') {
-                $query->where(function($q) {
+                $query->where(function ($q) {
                     $q->where('service_type', 'swimming_with_bucket')
-                      ->orWhere('service_type', 'swimming-with-bucket')
-                      ->orWhere('service_type', 'swimming_with_floating_trey')
-                      ->orWhere('service_type', 'swimming-with-floating-trey');
+                        ->orWhere('service_type', 'swimming-with-bucket')
+                        ->orWhere('service_type', 'swimming_with_floating_trey')
+                        ->orWhere('service_type', 'swimming-with-floating-trey');
                 });
             } elseif ($tab === 'ceremony' || $tab === 'ceremory') {
-                $query->where(function($q) {
+                $query->where(function ($q) {
                     $q->where('service_type', 'ceremony')
-                      ->orWhere('service_type', 'ceremory')
-                      ->orWhere('service_type', 'LIKE', '%ceremony%')
-                      ->orWhere('service_type', 'LIKE', '%ceremory%')
-                      ->orWhere('service_type', 'LIKE', '%birthday%')
-                      ->orWhere('service_type', 'LIKE', '%package%');
+                        ->orWhere('service_type', 'ceremory')
+                        ->orWhere('service_type', 'LIKE', '%ceremony%')
+                        ->orWhere('service_type', 'LIKE', '%ceremory%')
+                        ->orWhere('service_type', 'LIKE', '%birthday%')
+                        ->orWhere('service_type', 'LIKE', '%package%');
                 });
+            } elseif ($tab === 'parking') {
+                $query->where('service_type', 'parking');
+            } elseif ($tab === 'garden') {
+                $query->where('service_type', 'garden');
+            } elseif ($tab === 'conference_room') {
+                $query->where('service_type', 'conference_room');
             }
             // 'all' tab shows everything, no additional filter needed
         }
@@ -417,11 +424,11 @@ class DayServiceController extends Controller
 
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('service_reference', 'like', "%{$search}%")
-                  ->orWhere('guest_name', 'like', "%{$search}%")
-                  ->orWhere('guest_phone', 'like', "%{$search}%")
-                  ->orWhere('guest_email', 'like', "%{$search}%");
+                    ->orWhere('guest_name', 'like', "%{$search}%")
+                    ->orWhere('guest_phone', 'like', "%{$search}%")
+                    ->orWhere('guest_email', 'like', "%{$search}%");
             });
         }
 
@@ -432,25 +439,25 @@ class DayServiceController extends Controller
 
         // Calculate statistics for the current tab
         $statsQuery = DayService::with(['serviceRequests']);
-        
+
         // Apply same tab filter for statistics
         if ($request->filled('tab')) {
             $tab = $request->tab;
             if ($tab === 'swimming') {
                 $statsQuery->where('service_type', 'swimming');
             } elseif ($tab === 'swimming_with_bucket' || $tab === 'swimming-with-bucket') {
-                $statsQuery->where(function($q) {
+                $statsQuery->where(function ($q) {
                     $q->where('service_type', 'swimming_with_bucket')
-                      ->orWhere('service_type', 'swimming-with-bucket');
+                        ->orWhere('service_type', 'swimming-with-bucket');
                 });
             } elseif ($tab === 'ceremony' || $tab === 'ceremory') {
-                $statsQuery->where(function($q) {
+                $statsQuery->where(function ($q) {
                     $q->where('service_type', 'ceremony')
-                      ->orWhere('service_type', 'ceremory')
-                      ->orWhere('service_type', 'LIKE', '%ceremony%')
-                      ->orWhere('service_type', 'LIKE', '%ceremory%')
-                      ->orWhere('service_type', 'LIKE', '%birthday%')
-                      ->orWhere('service_type', 'LIKE', '%package%');
+                        ->orWhere('service_type', 'ceremory')
+                        ->orWhere('service_type', 'LIKE', '%ceremony%')
+                        ->orWhere('service_type', 'LIKE', '%ceremory%')
+                        ->orWhere('service_type', 'LIKE', '%birthday%')
+                        ->orWhere('service_type', 'LIKE', '%package%');
                 });
             }
         }
@@ -467,62 +474,64 @@ class DayServiceController extends Controller
         }
         if ($request->filled('search')) {
             $search = $request->search;
-            $statsQuery->where(function($q) use ($search) {
+            $statsQuery->where(function ($q) use ($search) {
                 $q->where('service_reference', 'like', "%{$search}%")
-                  ->orWhere('guest_name', 'like', "%{$search}%")
-                  ->orWhere('guest_phone', 'like', "%{$search}%")
-                  ->orWhere('guest_email', 'like', "%{$search}%");
+                    ->orWhere('guest_name', 'like', "%{$search}%")
+                    ->orWhere('guest_phone', 'like', "%{$search}%")
+                    ->orWhere('guest_email', 'like', "%{$search}%");
             });
         }
 
-        // Calculate statistics
-        $totalServices = $statsQuery->count();
-        $paidServices = (clone $statsQuery)->where('payment_status', 'paid')->count();
-        $pendingServices = (clone $statsQuery)->where('payment_status', 'pending')->count();
-        
-        $totalRevenue = 0;
-        $allServicesQuery = (clone $statsQuery)->get();
-        foreach ($allServicesQuery as $service) {
-            // 1. Add ceremony registration amount paid
-            $amountPaid = $service->amount_paid ?? 0;
-            if ($service->guest_type === 'international') {
-                $exchangeRate = $service->exchange_rate ?? 2487.81;
-                $amountPaid = $amountPaid * $exchangeRate;
-            }
-            $totalRevenue += $amountPaid;
+        // Calculate statistics using SQL aggregates for high performance
+        $statsData = (clone $statsQuery)->selectRaw('
+            COUNT(*) as total,
+            SUM(CASE WHEN payment_status = "paid" THEN 1 ELSE 0 END) as paid,
+            SUM(CASE WHEN payment_status = "pending" THEN 1 ELSE 0 END) as pending,
+            SUM(amount_paid) as revenue
+        ')->first();
 
-            // 2. Add paid bar/restaurant usage
-            $barPaid = $service->serviceRequests->where('payment_status', 'paid')->sum('total_price_tsh');
-            $totalRevenue += $barPaid;
-        }
-        
-        // Pending amount (amount not yet paid)
-        $pendingAmount = 0;
-        foreach ($allServicesQuery as $service) {
-            // 1. Add unpaid ceremony registration amount
-            $totalAmount = $service->amount ?? 0;
-            $amountPaid = $service->amount_paid ?? 0;
-            
-            if ($service->guest_type === 'international') {
-                $exchangeRate = $service->exchange_rate ?? 2487.81;
-                $totalAmount = $totalAmount * $exchangeRate;
-                $amountPaid = $amountPaid * $exchangeRate;
-            }
-            
-            $pendingRegistration = max(0, $totalAmount - $amountPaid);
-            $pendingAmount += $pendingRegistration;
+        // Calculate pending registration amount
+        $pendingReg = (clone $statsQuery)->where('payment_status', '!=', 'paid')
+            ->selectRaw('SUM(amount - amount_paid) as total_pending')
+            ->value('total_pending') ?? 0;
 
-            // 2. Add unpaid bar/restaurant usage
-            $barUnpaid = $service->serviceRequests->where('payment_status', 'pending')->sum('total_price_tsh');
-            $pendingAmount += $barUnpaid;
-        }
+        // Pending items from sub-requests (Bar/Restaurant)
+        $pendingItems = \App\Models\ServiceRequest::whereHas('dayService', function ($q) use ($request) {
+            // Apply same basic filters to the linked day service
+            if ($request->filled('tab')) {
+                $tab = $request->tab;
+                if ($tab === 'swimming')
+                    $q->where('service_type', 'swimming');
+                elseif ($tab === 'parking')
+                    $q->where('service_type', 'parking');
+                elseif ($tab === 'garden')
+                    $q->where('service_type', 'garden');
+                elseif ($tab === 'conference_room')
+                    $q->where('service_type', 'conference_room');
+            }
+        })->where('payment_status', 'pending')->sum('total_price_tsh');
+
+        // Paid items from sub-requests (Bar/Restaurant usage revenue)
+        $paidItemsRevenue = \App\Models\ServiceRequest::whereHas('dayService', function ($q) use ($request) {
+            if ($request->filled('tab')) {
+                $tab = $request->tab;
+                if ($tab === 'swimming')
+                    $q->where('service_type', 'swimming');
+                elseif ($tab === 'parking')
+                    $q->where('service_type', 'parking');
+                elseif ($tab === 'garden')
+                    $q->where('service_type', 'garden');
+                elseif ($tab === 'conference_room')
+                    $q->where('service_type', 'conference_room');
+            }
+        })->where('payment_status', 'paid')->sum('total_price_tsh');
 
         $statistics = [
-            'total_services' => $totalServices,
-            'paid_services' => $paidServices,
-            'pending_services' => $pendingServices,
-            'total_revenue' => $totalRevenue,
-            'pending_amount' => $pendingAmount,
+            'total_services' => $statsData->total ?? 0,
+            'paid_services' => $statsData->paid ?? 0,
+            'pending_services' => $statsData->pending ?? 0,
+            'total_revenue' => ($statsData->revenue ?? 0) + $paidItemsRevenue,
+            'pending_amount' => $pendingReg + $pendingItems,
         ];
 
         return view('dashboard.day-services-list', compact('dayServices', 'role', 'statistics'));
@@ -615,11 +624,11 @@ class DayServiceController extends Controller
     {
         // Only allow for ceremony services
         $serviceKey = strtolower($dayService->service_type ?? '');
-        $isCeremonyService = str_contains($serviceKey, 'ceremony') || 
-                            str_contains($serviceKey, 'ceremory') || 
-                            str_contains($serviceKey, 'birthday') || 
-                            str_contains($serviceKey, 'package');
-        
+        $isCeremonyService = str_contains($serviceKey, 'ceremony') ||
+            str_contains($serviceKey, 'ceremory') ||
+            str_contains($serviceKey, 'birthday') ||
+            str_contains($serviceKey, 'package');
+
         if (!$isCeremonyService) {
             return response()->json([
                 'success' => false,
@@ -684,11 +693,11 @@ class DayServiceController extends Controller
     {
         // Only allow for ceremony services
         $serviceKey = strtolower($dayService->service_type ?? '');
-        $isCeremonyService = str_contains($serviceKey, 'ceremony') || 
-                            str_contains($serviceKey, 'ceremory') || 
-                            str_contains($serviceKey, 'birthday') || 
-                            str_contains($serviceKey, 'package');
-        
+        $isCeremonyService = str_contains($serviceKey, 'ceremony') ||
+            str_contains($serviceKey, 'ceremory') ||
+            str_contains($serviceKey, 'birthday') ||
+            str_contains($serviceKey, 'package');
+
         if (!$isCeremonyService) {
             return response()->json([
                 'success' => false,
@@ -714,7 +723,7 @@ class DayServiceController extends Controller
 
         // Calculate payment status based on amount_paid and total_amount
         $amountPaid = $dayService->amount_paid ?? 0;
-        
+
         if (isset($validated['amount_paid']) && $validated['amount_paid'] !== null) {
             $amountPaid = $validated['amount_paid'];
         }
@@ -820,18 +829,18 @@ class DayServiceController extends Controller
                 if ($serviceType === 'swimming') {
                     $query->where('service_type', 'swimming');
                 } elseif ($serviceType === 'swimming_with_bucket') {
-                    $query->where(function($q) {
+                    $query->where(function ($q) {
                         $q->where('service_type', 'swimming_with_bucket')
-                          ->orWhere('service_type', 'swimming-with-bucket');
+                            ->orWhere('service_type', 'swimming-with-bucket');
                     });
                 } elseif ($serviceType === 'ceremony') {
-                    $query->where(function($q) {
+                    $query->where(function ($q) {
                         $q->where('service_type', 'ceremony')
-                          ->orWhere('service_type', 'ceremory')
-                          ->orWhere('service_type', 'LIKE', '%ceremony%')
-                          ->orWhere('service_type', 'LIKE', '%ceremory%')
-                          ->orWhere('service_type', 'LIKE', '%birthday%')
-                          ->orWhere('service_type', 'LIKE', '%package%');
+                            ->orWhere('service_type', 'ceremory')
+                            ->orWhere('service_type', 'LIKE', '%ceremony%')
+                            ->orWhere('service_type', 'LIKE', '%ceremory%')
+                            ->orWhere('service_type', 'LIKE', '%birthday%')
+                            ->orWhere('service_type', 'LIKE', '%package%');
                     });
                 }
             }
@@ -898,12 +907,12 @@ class DayServiceController extends Controller
         $startDate = $request->get('start_date');
         $endDate = $request->get('end_date');
         $serviceType = $request->get('service_type'); // swimming, swimming_with_bucket, ceremony, all
-        
+
         // Calculate date range based on report type
         $dateRange = $this->calculateDateRange($reportType, $reportDate, $startDate, $endDate);
         $start = $dateRange['start'];
         $end = $dateRange['end'];
-        
+
         // Build query for day services
         $query = DayService::with('registeredBy')
             ->whereBetween('service_date', [$start, $end])
@@ -915,18 +924,18 @@ class DayServiceController extends Controller
             if ($serviceType === 'swimming') {
                 $query->where('service_type', 'swimming');
             } elseif ($serviceType === 'swimming_with_bucket') {
-                $query->where(function($q) {
+                $query->where(function ($q) {
                     $q->where('service_type', 'swimming_with_bucket')
-                      ->orWhere('service_type', 'swimming-with-bucket');
+                        ->orWhere('service_type', 'swimming-with-bucket');
                 });
             } elseif ($serviceType === 'ceremony') {
-                $query->where(function($q) {
+                $query->where(function ($q) {
                     $q->where('service_type', 'ceremony')
-                      ->orWhere('service_type', 'ceremory')
-                      ->orWhere('service_type', 'LIKE', '%ceremony%')
-                      ->orWhere('service_type', 'LIKE', '%ceremory%')
-                      ->orWhere('service_type', 'LIKE', '%birthday%')
-                      ->orWhere('service_type', 'LIKE', '%package%');
+                        ->orWhere('service_type', 'ceremory')
+                        ->orWhere('service_type', 'LIKE', '%ceremony%')
+                        ->orWhere('service_type', 'LIKE', '%ceremory%')
+                        ->orWhere('service_type', 'LIKE', '%birthday%')
+                        ->orWhere('service_type', 'LIKE', '%package%');
                 });
             }
         }
@@ -959,7 +968,7 @@ class DayServiceController extends Controller
         $cleanLabel = preg_replace('/[^a-z0-9]+/', '_', strtolower($dateRange['label']));
         $cleanLabel = trim($cleanLabel, '_'); // Remove leading/trailing underscores
         $filename = 'day_services_report_' . $cleanLabel . '_' . date('Y-m-d_His') . '.html';
-        
+
         $html = view('dashboard.day-services-report-download', [
             'dateRange' => $dateRange,
             'dayServices' => $dayServices,
@@ -979,10 +988,10 @@ class DayServiceController extends Controller
     {
         $user = Auth::guard('staff')->user();
         $role = strtolower($user->role ?? '');
-        
+
         $filterCategories = null;
         $showPackage = true;
-        
+
         if ($role === 'bar_keeper') {
             $filterCategories = ['alcoholic_beverage', 'non_alcoholic_beverage', 'water', 'juices', 'energy_drinks', 'soft_drinks', 'beers', 'wines', 'spirits', 'cocktails', 'drinks', 'liquor'];
             $showPackage = false;
@@ -990,17 +999,17 @@ class DayServiceController extends Controller
             $filterCategories = ['food', 'restaurant', 'kitchen'];
             $showPackage = false;
         }
-        
+
         return view('dashboard.day-service-docket', compact('dayService', 'filterCategories', 'showPackage'));
     }
-    
+
     /**
      * Calculate date range based on report type
      */
     private function calculateDateRange($reportType, $reportDate = null, $startDate = null, $endDate = null)
     {
         $today = \Carbon\Carbon::today();
-        
+
         switch ($reportType) {
             case 'daily':
                 $date = $reportDate ? \Carbon\Carbon::parse($reportDate) : $today;
@@ -1009,7 +1018,7 @@ class DayServiceController extends Controller
                     'end' => $date->copy()->endOfDay(),
                     'label' => 'Daily Report - ' . $date->format('M d, Y'),
                 ];
-            
+
             case 'weekly':
                 $date = $reportDate ? \Carbon\Carbon::parse($reportDate) : $today;
                 $startOfWeek = $date->copy()->startOfWeek();
@@ -1019,7 +1028,7 @@ class DayServiceController extends Controller
                     'end' => $endOfWeek->endOfDay(),
                     'label' => 'Weekly Report - ' . $startOfWeek->format('M d') . ' to ' . $endOfWeek->format('M d, Y'),
                 ];
-            
+
             case 'monthly':
                 $date = $reportDate ? \Carbon\Carbon::parse($reportDate) : $today;
                 return [
@@ -1027,7 +1036,7 @@ class DayServiceController extends Controller
                     'end' => $date->copy()->endOfMonth()->endOfDay(),
                     'label' => 'Monthly Report - ' . $date->format('F Y'),
                 ];
-            
+
             case 'yearly':
                 $date = $reportDate ? \Carbon\Carbon::parse($reportDate) : $today;
                 return [
@@ -1035,7 +1044,7 @@ class DayServiceController extends Controller
                     'end' => $date->copy()->endOfYear()->endOfDay(),
                     'label' => 'Yearly Report - ' . $date->format('Y'),
                 ];
-            
+
             case 'custom':
                 $start = $startDate ? \Carbon\Carbon::parse($startDate)->startOfDay() : $today->copy()->startOfMonth()->startOfDay();
                 $end = $endDate ? \Carbon\Carbon::parse($endDate)->endOfDay() : $today->copy()->endOfDay();
@@ -1044,7 +1053,7 @@ class DayServiceController extends Controller
                     'end' => $end,
                     'label' => 'Custom Report - ' . $start->format('M d, Y') . ' to ' . $end->format('M d, Y'),
                 ];
-            
+
             default:
                 return [
                     'start' => $today->copy()->startOfDay(),

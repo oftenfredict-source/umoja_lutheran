@@ -4,7 +4,7 @@
 <div class="app-title">
   <div>
     <h1><i class="fa fa-plus-circle"></i> Register Day Service</h1>
-    <p>Register one-time services (Swimming, Restaurant, Bar)</p>
+    <p>Register one-time services (Parking, Garden, Conference, Restaurant, Bar)</p>
   </div>
   <ul class="app-breadcrumb breadcrumb">
     <li class="breadcrumb-item"><i class="fa fa-home fa-lg"></i></li>
@@ -258,7 +258,7 @@
             <i class="fa fa-save"></i> Save as Pending
           </button>
           <button type="submit" class="btn btn-primary">
-            <i class="fa fa-check"></i> Process Payment & Generate Receipt
+            <i class="fa fa-check"></i> Register & Verify Payment
           </button>
           <a href="{{ $role === 'reception' ? route('reception.day-services.index') : route('admin.day-services.index') }}" class="btn btn-secondary">
             <i class="fa fa-times"></i> Cancel

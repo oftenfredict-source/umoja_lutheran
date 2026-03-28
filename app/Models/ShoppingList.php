@@ -32,30 +32,20 @@ class ShoppingList extends Model
     {
         return $this->hasMany(ShoppingListItem::class);
     }
-    
+
     /**
-     * Get total estimated cost (calculate from items if not stored)
+     * Get total estimated cost (always calculate from items to ensure accuracy)
      */
     public function getTotalEstimatedCostAttribute($value)
     {
-        // If value is explicitly set (even if 0), use it
-        if ($this->attributes['total_estimated_cost'] !== null) {
-            return $value;
-        }
-        // Calculate from items if not stored (null)
-        return $this->items->sum('estimated_price') ?? 0;
+        return $this->items->sum('estimated_price') ?: ($value ?? 0);
     }
-    
+
     /**
-     * Get total actual cost (from stored value or calculate from purchased items)
+     * Get total actual cost (always calculate from items to ensure accuracy)
      */
     public function getTotalActualCostAttribute($value)
     {
-        // If value is explicitly set (even if 0), use it
-        if ($this->attributes['total_actual_cost'] !== null) {
-            return $value;
-        }
-        // Calculate from purchased items if not stored (null)
-        return $this->items->sum('purchased_cost') ?? 0;
+        return $this->items->sum('purchased_cost') ?: ($value ?? 0);
     }
 }

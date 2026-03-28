@@ -15,11 +15,11 @@ class RolePermissionService
         if (!$user) {
             return null;
         }
-        
+
         if ($user instanceof Staff) {
             $rawRole = $user->role ?? '';
             $normalizedRole = strtolower(str_replace([' ', '_'], '', trim($rawRole)));
-            
+
             if ($normalizedRole === 'superadmin' || $rawRole === 'super_admin' || strtolower($rawRole) === 'super admin') {
                 return 'super_admin';
             } elseif ($normalizedRole === 'manager' || $rawRole === 'manager') {
@@ -28,14 +28,24 @@ class RolePermissionService
                 return 'reception';
             } elseif ($normalizedRole === 'headchef' || $rawRole === 'head_chef') {
                 return 'head_chef';
+            } elseif ($normalizedRole === 'housekeeper' || $rawRole === 'housekeeper') {
+                return 'housekeeper';
+            } elseif ($normalizedRole === 'waiter' || $rawRole === 'waiter') {
+                return 'waiter';
+            } elseif ($normalizedRole === 'barkeeper' || $rawRole === 'bar_keeper') {
+                return 'bar_keeper';
+            } elseif ($normalizedRole === 'storekeeper' || $rawRole === 'storekeeper') {
+                return 'storekeeper';
+            } elseif ($normalizedRole === 'accountant' || $rawRole === 'accountant') {
+                return 'accountant';
             }
         } elseif ($user instanceof Guest) {
             return 'customer';
         }
-        
+
         return null;
     }
-    
+
     /**
      * Check if user has a specific role
      */
@@ -44,7 +54,7 @@ class RolePermissionService
         $userRole = self::getUserRole($user);
         return $userRole === $role;
     }
-    
+
     /**
      * Check if user has any of the specified roles
      */
@@ -53,7 +63,7 @@ class RolePermissionService
         $userRole = self::getUserRole($user);
         return $userRole && in_array($userRole, $roles);
     }
-    
+
     /**
      * Check if user has permission (with role check)
      */
@@ -65,19 +75,19 @@ class RolePermissionService
             }
             return false;
         }
-        
+
         if (!$permissionName) {
             if (config('app.debug')) {
                 \Log::debug("RolePermissionService::hasPermission: Permission name is empty for user ID " . ($user->id ?? 'unknown'));
             }
             return false;
         }
-        
+
         // Super admin always has all permissions
         if ($user instanceof Staff && $user->isSuperAdmin()) {
             return true;
         }
-        
+
         // Guest model doesn't have hasPermission method
         if ($user instanceof Guest) {
             if (config('app.debug')) {
@@ -85,7 +95,7 @@ class RolePermissionService
             }
             return false;
         }
-        
+
         // Check permission through role
         if (method_exists($user, 'hasPermission')) {
             $result = $user->hasPermission($permissionName);
@@ -94,21 +104,21 @@ class RolePermissionService
             }
             return $result;
         }
-        
+
         if (config('app.debug')) {
             \Log::warning("RolePermissionService::hasPermission: User object doesn't have hasPermission method. User type: " . get_class($user));
         }
-        
+
         return false;
     }
-    
+
     /**
      * Check if user can access a route based on role
      */
     public static function canAccessRoute($user, string $routeName): bool
     {
         $userRole = self::getUserRole($user);
-        
+
         // Map routes to required roles
         $routeRoleMap = [
             'super_admin' => ['super_admin.dashboard', 'super_admin.users', 'super_admin.roles', 'super_admin.permissions'],
@@ -116,13 +126,13 @@ class RolePermissionService
             'reception' => ['reception.dashboard', 'reception.bookings', 'reception.reservations', 'reception.guests', 'reception.rooms'],
             'customer' => ['customer.dashboard', 'customer.bookings', 'customer.profile'],
         ];
-        
+
         foreach ($routeRoleMap as $role => $routes) {
             if ($userRole === $role && in_array($routeName, $routes)) {
                 return true;
             }
         }
-        
+
         // Check if route starts with role prefix
         if ($userRole === 'super_admin' && str_starts_with($routeName, 'super_admin.')) {
             return true;
@@ -136,7 +146,7 @@ class RolePermissionService
         if ($userRole === 'customer' && str_starts_with($routeName, 'customer.')) {
             return true;
         }
-        
+
         return false;
     }
 }

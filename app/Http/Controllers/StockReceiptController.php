@@ -18,16 +18,23 @@ class StockReceiptController extends Controller
     {
         $user = Auth::guard('staff')->user();
         $role = strtolower($user->role ?? 'manager');
-        
+
         $query = StockReceipt::with(['product', 'productVariant', 'supplier', 'receivedBy']);
-        
+
         // Filter by product type
-        if ($request->has('type') && in_array($request->type, ['drink', 'food'])) {
-            $query->whereHas('product', function($q) use ($request) {
-                $q->where('type', $request->type);
+        if ($request->has('type')) {
+            $type = $request->type;
+            $query->whereHas('product', function ($q) use ($type) {
+                if ($type === 'drink') {
+                    $q->whereIn('category', ['alcoholic_beverage', 'non_alcoholic_beverage', 'water', 'juices', 'energy_drinks', 'drinks', 'beverage']);
+                } elseif ($type === 'food') {
+                    $q->whereIn('category', ['food', 'meat_poultry', 'seafood', 'vegetables', 'dairy', 'pantry_baking', 'spices_herbs', 'oils_fats', 'kitchen', 'snacks']);
+                } elseif ($type === 'housekeeping') {
+                    $q->whereIn('category', ['cleaning_supplies', 'linens', 'housekeeping']);
+                }
             });
         }
-        
+
         // Filter by date range
         if ($request->has('date_from')) {
             $query->where('received_date', '>=', $request->date_from);
@@ -35,22 +42,22 @@ class StockReceiptController extends Controller
         if ($request->has('date_to')) {
             $query->where('received_date', '<=', $request->date_to);
         }
-        
+
         // Search
         if ($request->has('search')) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->whereHas('product', function($q2) use ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->whereHas('product', function ($q2) use ($search) {
                     $q2->where('name', 'LIKE', "%{$search}%");
                 })
-                ->orWhereHas('supplier', function($q2) use ($search) {
-                    $q2->where('name', 'LIKE', "%{$search}%");
-                });
+                    ->orWhereHas('supplier', function ($q2) use ($search) {
+                        $q2->where('name', 'LIKE', "%{$search}%");
+                    });
             });
         }
-        
+
         $stockReceipts = $query->orderBy('received_date', 'desc')->paginate(20);
-        
+
         $type = $request->type;
         return view('dashboard.stock-receipts-list', compact('stockReceipts', 'role', 'type'));
     }
@@ -63,18 +70,24 @@ class StockReceiptController extends Controller
         $user = Auth::guard('staff')->user();
         $role = strtolower($user->role ?? 'manager');
         $type = $request->type;
-        
+
         $query = Product::where('is_active', true);
-        
-        if ($type && in_array($type, ['drink', 'food'])) {
-            $query->where('type', $type);
+
+        if ($type) {
+            if ($type === 'drink') {
+                $query->whereIn('category', ['alcoholic_beverage', 'non_alcoholic_beverage', 'water', 'juices', 'energy_drinks', 'drinks', 'beverage']);
+            } elseif ($type === 'food') {
+                $query->whereIn('category', ['food', 'meat_poultry', 'seafood', 'vegetables', 'dairy', 'pantry_baking', 'spices_herbs', 'oils_fats', 'kitchen', 'snacks']);
+            } elseif ($type === 'housekeeping') {
+                $query->whereIn('category', ['cleaning_supplies', 'linens', 'housekeeping']);
+            }
         }
-        
-        $products = $query->with('variants')
+
+        $products = $query->with(['variants', 'supplier'])
             ->orderBy('name')
             ->get();
         $suppliers = Supplier::where('is_active', true)->orderBy('name')->get();
-        
+
         return view('dashboard.stock-receipt-form', compact('products', 'suppliers', 'role', 'type'));
     }
 
@@ -87,7 +100,7 @@ class StockReceiptController extends Controller
             'product_id' => 'required|exists:products,id',
             'product_variant_id' => 'required|exists:product_variants,id',
             'supplier_id' => 'required|exists:suppliers,id',
-            'quantity_received_packages' => 'required|integer|min:1',
+            'quantity_received_packages' => 'required|numeric|min:0.01',
             'buying_price_per_bottle' => 'required|numeric|min:0',
             'selling_price_per_bottle' => 'required|numeric|min:0',
             'discount_type' => 'nullable|in:percentage,fixed,none',
@@ -147,10 +160,10 @@ class StockReceiptController extends Controller
     public function getProductVariants(Product $product)
     {
         $variants = $product->variants()->where('is_active', true)->orderBy('display_order')->get();
-        
+
         // Add packaging_name to each variant
-        $variants->transform(function($variant) {
-            $variant->packaging_name = match($variant->packaging) {
+        $variants->transform(function ($variant) {
+            $variant->packaging_name = match ($variant->packaging) {
                 'crates' => 'Crates',
                 'carton' => 'Cartons',
                 'boxes' => 'Boxes',
@@ -160,10 +173,16 @@ class StockReceiptController extends Controller
             };
             return $variant;
         });
-        
+
         return response()->json([
             'success' => true,
             'variants' => $variants,
+            'product' => [
+                'id' => $product->id,
+                'name' => $product->name,
+                'category' => $product->category,
+                'type' => $product->type,
+            ]
         ]);
     }
 
@@ -174,20 +193,23 @@ class StockReceiptController extends Controller
     {
         $request->validate([
             'product_variant_id' => 'required|exists:product_variants,id',
-            'quantity_received_packages' => 'required|integer|min:1',
+            'quantity_received_packages' => 'required|numeric|min:0.01',
             'buying_price_per_bottle' => 'required|numeric|min:0',
             'selling_price_per_bottle' => 'required|numeric|min:0',
         ]);
 
-        $variant = ProductVariant::findOrFail($request->product_variant_id);
+        $variant = ProductVariant::with('product')->findOrFail($request->product_variant_id);
         $quantityPackages = $request->quantity_received_packages;
         $buyingPrice = $request->buying_price_per_bottle;
         $sellingPrice = $request->selling_price_per_bottle;
 
-        $totalBottles = $quantityPackages * $variant->items_per_package;
+        $foodCategories = ['food', 'meat_poultry', 'seafood', 'vegetables', 'dairy', 'pantry_baking', 'spices_herbs', 'oils_fats', 'kitchen', 'snacks'];
+        $isFood = in_array(strtolower($variant->product->category), $foodCategories);
+
+        $totalBottles = $isFood ? $quantityPackages : ($quantityPackages * $variant->items_per_package);
         $profitPerBottle = $sellingPrice - $buyingPrice;
         $totalBuyingCost = $totalBottles * $buyingPrice;
-        $totalProfit = $totalBottles * $profitPerBottle;
+        $totalProfit = ($totalBottles * $sellingPrice) - $totalBuyingCost;
 
         return response()->json([
             'success' => true,

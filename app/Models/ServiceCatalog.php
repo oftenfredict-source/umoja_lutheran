@@ -15,6 +15,10 @@ class ServiceCatalog extends Model
         'pricing_type',
         'price_tanzanian',
         'price_international',
+        'night_price_tanzanian',
+        'night_price_international',
+        'day_start_time',
+        'day_end_time',
         'age_group',
         'child_price_tanzanian',
         'payment_required_upfront',
@@ -31,6 +35,8 @@ class ServiceCatalog extends Model
     protected $casts = [
         'price_tanzanian' => 'decimal:2',
         'price_international' => 'decimal:2',
+        'night_price_tanzanian' => 'decimal:2',
+        'night_price_international' => 'decimal:2',
         'child_price_tanzanian' => 'decimal:2',
         'payment_required_upfront' => 'boolean',
         'requires_items' => 'boolean',
@@ -40,7 +46,7 @@ class ServiceCatalog extends Model
         'last_edited_at' => 'datetime',
         'last_changes' => 'array',
     ];
-    
+
     /**
      * Get the staff member who last edited this service
      */
@@ -68,7 +74,7 @@ class ServiceCatalog extends Model
     // Get pricing type name
     public function getPricingTypeNameAttribute()
     {
-        return match($this->pricing_type) {
+        return match ($this->pricing_type) {
             'per_person' => 'Per Person',
             'per_hour' => 'Per Hour',
             'fixed' => 'Fixed Price',

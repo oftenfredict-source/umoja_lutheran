@@ -92,7 +92,7 @@
               <div class="modal fade" id="assignPermissionsModal{{ $roleItem->id }}" tabindex="-1" role="dialog">
                 <div class="modal-dialog modal-lg" role="document">
                   <div class="modal-content">
-                    <form action="{{ route('super_admin.roles.assign-permissions', $role) }}" method="POST">
+                    <form action="{{ route('super_admin.roles.assign-permissions', $roleItem) }}" method="POST">
                       @csrf
                       <div class="modal-header">
                         <h5 class="modal-title">Assign Permissions to {{ $roleItem->display_name }}</h5>

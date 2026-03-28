@@ -19,19 +19,19 @@ class CheckRole
     public function handle(Request $request, Closure $next, ...$roles): Response
     {
         $user = auth()->guard('staff')->user() ?? auth()->guard('guest')->user();
-        
+
         if (!$user) {
             return redirect()->route('login')->withErrors(['email' => 'Please login to access this page.']);
         }
-        
+
         // Get user's actual role
         $userRole = null;
-        
+
         if ($user instanceof \App\Models\Staff) {
             $rawRole = $user->role ?? '';
             $normalizedRole = strtolower(str_replace([' ', '_'], '', trim($rawRole)));
             $rawRoleLower = strtolower(trim($rawRole));
-            
+
             // Map to standard role names
             if ($normalizedRole === 'superadmin' || $rawRoleLower === 'super_admin' || $rawRoleLower === 'super admin') {
                 $userRole = 'super_admin';
@@ -47,11 +47,15 @@ class CheckRole
                 $userRole = 'housekeeper';
             } elseif ($normalizedRole === 'waiter' || $rawRoleLower === 'waiter') {
                 $userRole = 'waiter';
+            } elseif ($normalizedRole === 'storekeeper' || $rawRoleLower === 'storekeeper') {
+                $userRole = 'storekeeper';
+            } elseif ($normalizedRole === 'accountant' || $rawRoleLower === 'accountant') {
+                $userRole = 'accountant';
             }
         } elseif ($user instanceof \App\Models\Guest) {
             $userRole = 'customer'; // Guests are mapped to 'customer' role
         }
-        
+
         // If user role could not be determined, redirect to login (user session may be corrupted)
         if (!$userRole) {
             \Log::warning('CheckRole middleware: User role could not be determined, redirecting to login', [
@@ -61,12 +65,12 @@ class CheckRole
             ]);
             return redirect()->route('login')->withErrors(['email' => 'Your session is invalid. Please login again.']);
         }
-        
+
         // Normalize role names in the required roles array (handle 'guest' -> 'customer')
-        $normalizedRoles = array_map(function($role) {
+        $normalizedRoles = array_map(function ($role) {
             return $role === 'guest' ? 'customer' : $role;
         }, $roles);
-        
+
         // Check if user has one of the required roles
         // Super Admin always has access to everything
         if ($userRole === 'super_admin') {
@@ -74,6 +78,14 @@ class CheckRole
         }
 
         if (!in_array($userRole, $normalizedRoles)) {
+            // FALLBACK: Check if the user has a permission that matches the route name
+            // This allows the "Permissions" UI settings to override hardcoded roles in web.php
+            $routeName = $request->route() ? $request->route()->getName() : null;
+            if ($routeName && $user instanceof \App\Models\Staff && $user->hasPermission($routeName)) {
+                // User has explicit permission for this route name
+                return $next($request);
+            }
+
             // Log for debugging
             \Log::warning('CheckRole middleware blocked access - insufficient permissions', [
                 'user_id' => $user->id ?? null,
@@ -81,12 +93,13 @@ class CheckRole
                 'raw_role' => $user instanceof \App\Models\Staff ? $user->role : null,
                 'normalized_user_role' => $userRole,
                 'required_roles' => $normalizedRoles,
-                'route' => $request->route()?->getName(),
+                'route' => $routeName,
                 'url' => $request->url(),
+                'has_route_permission' => ($routeName && $user instanceof \App\Models\Staff) ? $user->hasPermission($routeName) : false,
             ]);
             abort(403, 'Access denied. You do not have permission to access this page.');
         }
-        
+
         return $next($request);
     }
 }

@@ -33,7 +33,7 @@ class SuperAdminController extends Controller
     {
         $user = auth()->guard('staff')->user() ?? auth()->guard('guest')->user();
         $currentSessionId = $request->session()->getId();
-        
+
         // System statistics
         $stats = [
             'total_users' => Staff::count() + Guest::count(),
@@ -46,27 +46,27 @@ class SuperAdminController extends Controller
             'total_bookings' => Booking::count(),
             'total_rooms' => Room::count(),
         ];
-        
+
         // Recent activity logs with pagination
         $recentActivities = ActivityLog::orderBy('created_at', 'desc')
             ->paginate(3, ['*'], 'activities_page');
-        
+
         // System logs summary
         $systemLogsSummary = [
             'error' => SystemLog::where('level', 'error')->whereDate('created_at', Carbon::today())->count(),
             'warning' => SystemLog::where('level', 'warning')->whereDate('created_at', Carbon::today())->count(),
             'info' => SystemLog::where('level', 'info')->whereDate('created_at', Carbon::today())->count(),
         ];
-        
+
         // User activity by role
         $userActivityByRole = collect();
         try {
             // Try to get user_type from column if it exists
             $todayLogs = ActivityLog::whereDate('created_at', Carbon::today())->get();
-            
+
             foreach ($todayLogs as $log) {
                 $userType = null;
-                
+
                 // First try to get from user_type column if it exists and has value
                 if (isset($log->user_type) && $log->user_type) {
                     $userType = $log->user_type;
@@ -77,7 +77,7 @@ class SuperAdminController extends Controller
                 } else {
                     $userType = 'system';
                 }
-                
+
                 $currentCount = $userActivityByRole->get($userType, 0);
                 $userActivityByRole->put($userType, $currentCount + 1);
             }
@@ -85,22 +85,22 @@ class SuperAdminController extends Controller
             // If query fails, return empty collection
             Log::warning('Failed to get user activity by role: ' . $e->getMessage());
         }
-        
+
         // Get currently logged in users from sessions table with pagination
         // First get all active sessions for status checking
         $allActiveSessions = DB::table('sessions')
             ->where('last_activity', '>', now()->subMinutes(config('session.lifetime', 120))->timestamp)
             ->orderBy('last_activity', 'desc')
             ->get();
-        
+
         // Get all active session IDs for matching
         $activeSessionIds = $allActiveSessions->pluck('id')->toArray();
-        
+
         // Get all logged in users for status checking
         // Use email as key since it's unique across Staff and Guest
         $allLoggedInUsers = [];
         $activeUserEmails = []; // Map of active user emails for quick lookup
-        
+
         // Method 1: Check sessions table by user_id (if stored)
         foreach ($allActiveSessions as $session) {
             if ($session->user_id) {
@@ -119,7 +119,7 @@ class SuperAdminController extends Controller
                 }
             }
         }
-        
+
         // Method 2: Check Staff and Guest tables for users with active last_session_id
         // This is more reliable since we store last_session_id in user tables
         if (!empty($activeSessionIds)) {
@@ -127,7 +127,7 @@ class SuperAdminController extends Controller
                 ->whereNotNull('session_token')
                 ->whereIn('last_session_id', $activeSessionIds)
                 ->get();
-            
+
             foreach ($staffWithActiveSessions as $staff) {
                 if (!isset($activeUserEmails[$staff->email])) {
                     // Find the session for this user to get IP and user agent
@@ -142,12 +142,12 @@ class SuperAdminController extends Controller
                     $activeUserEmails[$staff->email] = true;
                 }
             }
-            
+
             $guestsWithActiveSessions = Guest::whereNotNull('last_session_id')
                 ->whereNotNull('session_token')
                 ->whereIn('last_session_id', $activeSessionIds)
                 ->get();
-            
+
             foreach ($guestsWithActiveSessions as $guest) {
                 if (!isset($activeUserEmails[$guest->email])) {
                     // Find the session for this user to get IP and user agent
@@ -163,7 +163,7 @@ class SuperAdminController extends Controller
                 }
             }
         }
-        
+
         // Method 3: Fallback - check if current user has session_token and last_session_id
         // This ensures the current logged-in user always shows as active
         if ($user && $user->session_token && $user->last_session_id) {
@@ -180,21 +180,21 @@ class SuperAdminController extends Controller
                 $activeUserEmails[$user->email] = true;
             }
         }
-        
+
         // Now get paginated version for display using the comprehensive $allLoggedInUsers
         // Use the same data we collected above, but paginate it
         $perPage = 3;
         $currentPage = $request->get('active_users_page', 1);
         $total = count($allLoggedInUsers);
-        
+
         // Sort by last_activity (most recent first)
-        usort($allLoggedInUsers, function($a, $b) {
+        usort($allLoggedInUsers, function ($a, $b) {
             return $b['last_activity']->timestamp <=> $a['last_activity']->timestamp;
         });
-        
+
         // Get the items for current page
         $items = array_slice($allLoggedInUsers, ($currentPage - 1) * $perPage, $perPage);
-        
+
         // Create paginated collection
         $loggedInUsersPaginated = new \Illuminate\Pagination\LengthAwarePaginator(
             $items,
@@ -203,28 +203,28 @@ class SuperAdminController extends Controller
             $currentPage,
             ['path' => $request->url(), 'pageName' => 'active_users_page']
         );
-        
+
         // Get recent login/logout activities with pagination
         $loginLogoutActivities = ActivityLog::whereIn('action', ['logged_in', 'logged_out'])
             ->orderBy('created_at', 'desc')
             ->paginate(3, ['*'], 'login_activities_page');
-        
+
         // Get staff with their last login time
         $staffWithLastLogin = Staff::select([
-                'staffs.*',
-                DB::raw('(SELECT MAX(created_at) FROM activity_logs WHERE activity_logs.user_id = staffs.id AND activity_logs.action = "logged_in") as last_login'),
-                DB::raw('(SELECT ip_address FROM activity_logs WHERE activity_logs.user_id = staffs.id AND activity_logs.action = "logged_in" ORDER BY created_at DESC LIMIT 1) as last_login_ip')
-            ])
+            'staffs.*',
+            DB::raw('(SELECT MAX(created_at) FROM activity_logs WHERE activity_logs.user_id = staffs.id AND activity_logs.action = "logged_in") as last_login'),
+            DB::raw('(SELECT ip_address FROM activity_logs WHERE activity_logs.user_id = staffs.id AND activity_logs.action = "logged_in" ORDER BY created_at DESC LIMIT 1) as last_login_ip')
+        ])
             ->orderByRaw('ISNULL(last_login), last_login DESC');
-        
+
         // Get guests with their last login time
         $guestsWithLastLogin = Guest::select([
-                'guests.*',
-                DB::raw('(SELECT MAX(created_at) FROM activity_logs WHERE activity_logs.user_id = guests.id AND activity_logs.action = "logged_in") as last_login'),
-                DB::raw('(SELECT ip_address FROM activity_logs WHERE activity_logs.user_id = guests.id AND activity_logs.action = "logged_in" ORDER BY created_at DESC LIMIT 1) as last_login_ip')
-            ])
+            'guests.*',
+            DB::raw('(SELECT MAX(created_at) FROM activity_logs WHERE activity_logs.user_id = guests.id AND activity_logs.action = "logged_in") as last_login'),
+            DB::raw('(SELECT ip_address FROM activity_logs WHERE activity_logs.user_id = guests.id AND activity_logs.action = "logged_in" ORDER BY created_at DESC LIMIT 1) as last_login_ip')
+        ])
             ->orderByRaw('ISNULL(last_login), last_login DESC');
-        
+
         // Combine staff and guests with pagination
         // We need to get all, combine, sort, then paginate manually
         $allUsers = $staffWithLastLogin->get()->concat($guestsWithLastLogin->get())->sortByDesc('last_login')->values();
@@ -238,12 +238,12 @@ class SuperAdminController extends Controller
             $currentPage,
             ['path' => $request->url(), 'pageName' => 'users_page']
         );
-        
+
         // Get technical issues (errors and critical system logs) with pagination
         $technicalIssues = SystemLog::whereIn('level', ['error', 'critical'])
             ->orderBy('created_at', 'desc')
             ->paginate(3, ['*'], 'technical_issues_page');
-        
+
         // Get login statistics
         $loginStats = [
             'today' => ActivityLog::where('action', 'logged_in')
@@ -257,7 +257,7 @@ class SuperAdminController extends Controller
                 ->whereYear('created_at', Carbon::now()->year)
                 ->count(),
         ];
-        
+
         return view('dashboard.super-admin.dashboard', [
             'role' => 'super_admin',
             'userName' => $user->name ?? 'Super Admin',
@@ -275,7 +275,7 @@ class SuperAdminController extends Controller
             'loginStats' => $loginStats,
         ]);
     }
-    
+
     /**
      * Display all users management (Staff and Guests)
      */
@@ -283,53 +283,53 @@ class SuperAdminController extends Controller
     {
         // Determine active tab (default to 'employees')
         $activeTab = $request->get('tab', 'employees');
-        
+
         // Get staff (employees)
         $staffQuery = Staff::query();
-        
+
         // Get guests
         $guestQuery = Guest::query();
-        
+
         // Filter by role (for staff only)
         if ($request->has('role') && $request->role && $activeTab === 'employees') {
             $role = $request->role;
             if ($role === 'super_admin') {
                 // Handle both 'super_admin' and 'Super Admin' formats
-                $staffQuery->where(function($q) {
+                $staffQuery->where(function ($q) {
                     $q->where('role', 'super_admin')
-                      ->orWhere('role', 'Super Admin')
-                      ->orWhereRaw('LOWER(REPLACE(role, " ", "_")) = ?', ['super_admin']);
+                        ->orWhere('role', 'Super Admin')
+                        ->orWhereRaw('LOWER(REPLACE(role, " ", "_")) = ?', ['super_admin']);
                 });
             } elseif ($role === 'reception') {
                 // Handle case-insensitive matching for reception
-                $staffQuery->where(function($q) {
+                $staffQuery->where(function ($q) {
                     $q->where('role', 'reception')
-                      ->orWhere('role', 'Reception')
-                      ->orWhereRaw('LOWER(TRIM(role)) = ?', ['reception'])
-                      ->orWhereRaw('LOWER(role) LIKE ?', ['%reception%']);
+                        ->orWhere('role', 'Reception')
+                        ->orWhereRaw('LOWER(TRIM(role)) = ?', ['reception'])
+                        ->orWhereRaw('LOWER(role) LIKE ?', ['%reception%']);
                 });
-            } elseif ($role === 'manager' || $role === 'waiter' || $role === 'housekeeper' || $role === 'bar_keeper' || $role === 'head_chef') {
+            } elseif ($role === 'manager' || $role === 'waiter' || $role === 'housekeeper' || $role === 'bar_keeper' || $role === 'head_chef' || $role === 'storekeeper' || $role === 'accountant') {
                 $staffQuery->where('role', $role);
             }
         }
-        
+
         // Search
         if ($request->has('search') && $request->search) {
             $search = $request->search;
-            $staffQuery->where(function($q) use ($search) {
+            $staffQuery->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
+                    ->orWhere('email', 'like', "%{$search}%");
             });
-            $guestQuery->where(function($q) use ($search) {
+            $guestQuery->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
+                    ->orWhere('email', 'like', "%{$search}%");
             });
         }
-        
+
         // Get paginated results based on active tab
         $perPage = 20;
         $page = $request->get('page', 1);
-        
+
         if ($activeTab === 'guests') {
             // Show only guests
             $users = $guestQuery->orderBy('created_at', 'desc')->paginate($perPage);
@@ -341,10 +341,10 @@ class SuperAdminController extends Controller
             // Count for employees tab (matching the filtered query)
             $totalEmployees = $staffQuery->count();
         }
-        
+
         // Append query parameters to pagination links
         $users->appends($request->except('page'));
-        
+
         // Get role counts (for statistics cards - these show all records)
         $roleCounts = [
             'super_admin' => Staff::where('role', 'super_admin')->orWhere('role', 'like', '%Super Admin%')->count(),
@@ -356,7 +356,7 @@ class SuperAdminController extends Controller
             'total_employees' => isset($totalEmployees) ? $totalEmployees : Staff::count(),
             'total_guests' => isset($totalGuests) ? $totalGuests : Guest::count(),
         ];
-        
+
         return view('dashboard.super-admin.users', [
             'role' => 'super_admin',
             'userName' => (auth()->guard('staff')->user() ?? auth()->guard('guest')->user())->name ?? 'Super Admin',
@@ -367,14 +367,14 @@ class SuperAdminController extends Controller
             'activeTab' => $activeTab,
         ]);
     }
-    
+
     /**
      * Show create user form
      */
     public function createUser()
     {
         $roles = Role::where('is_system', false)->orWhereIn('name', ['manager', 'reception', 'guest', 'waiter'])->get();
-        
+
         return view('dashboard.super-admin.user-form', [
             'role' => 'super_admin',
             'userName' => (auth()->guard('staff')->user() ?? auth()->guard('guest')->user())->name ?? 'Super Admin',
@@ -383,7 +383,7 @@ class SuperAdminController extends Controller
             'roles' => $roles,
         ]);
     }
-    
+
     /**
      * Store new user
      */
@@ -394,38 +394,38 @@ class SuperAdminController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email',
             'phone' => 'required|string|max:20',
-            'role' => 'required|string|in:super_admin,manager,reception,guest,bar_keeper,head_chef,housekeeper,waiter',
+            'role' => 'required|string|in:super_admin,manager,reception,guest,bar_keeper,head_chef,housekeeper,waiter,storekeeper,accountant',
             'is_active' => 'boolean',
         ];
-        
+
         // For staff accounts, password is not required (will use first name)
         // For guest accounts, we'll generate a default password too
         // Password is completely optional - if provided, it will be used; otherwise auto-generated
         if ($request->has('password') && $request->password) {
             $rules['password'] = 'string|min:8|confirmed';
         }
-        
+
         $validated = $request->validate($rules);
-        
+
         // Determine which table to check for unique email
         $emailExists = Staff::where('email', $validated['email'])->exists() || Guest::where('email', $validated['email'])->exists();
-        
+
         if ($emailExists) {
             return back()->withErrors(['email' => 'The email has already been taken.'])->withInput();
         }
-        
+
         // Extract first name and use it as default password for all accounts
         $nameParts = explode(' ', trim($validated['name']));
         $firstName = !empty($nameParts[0]) ? $nameParts[0] : $validated['name'];
         $defaultPassword = strtoupper($firstName);
-        
+
         // Use provided password if given, otherwise use first name
-        $password = $request->has('password') && $request->password 
+        $password = $request->has('password') && $request->password
             ? ($validated['password'] ?? $defaultPassword)
             : $defaultPassword;
-        
+
         // Create Staff or Guest based on role
-        if (in_array($validated['role'], ['super_admin', 'manager', 'reception', 'bar_keeper', 'head_chef', 'housekeeper', 'waiter'])) {
+        if (in_array($validated['role'], ['super_admin', 'manager', 'reception', 'bar_keeper', 'head_chef', 'housekeeper', 'waiter', 'storekeeper', 'accountant'])) {
             $user = Staff::create([
                 'name' => $validated['name'],
                 'email' => $validated['email'],
@@ -434,7 +434,7 @@ class SuperAdminController extends Controller
                 'role' => $validated['role'],
                 'is_active' => $request->has('is_active') ? $validated['is_active'] : true,
             ]);
-            
+
             // Send welcome email to staff with credentials
             try {
                 Mail::to($user->email)->send(new \App\Mail\StaffWelcomeMail($user, $defaultPassword, $validated['role']));
@@ -457,7 +457,7 @@ class SuperAdminController extends Controller
                 $roleName = ucwords(str_replace('_', ' ', $user->role));
                 $smsMessage = "Hello {$user->name}, your Umoja Lutheran account has been created as {$roleName}. Username: {$user->email}, Password: {$defaultPassword}. Change your password upon login.";
                 $smsResult = $smsService->sendSms($user->phone, $smsMessage);
-                
+
                 if ($smsResult['success']) {
                     Log::info('Staff welcome SMS sent', [
                         'user_id' => $user->id,
@@ -485,7 +485,7 @@ class SuperAdminController extends Controller
                 'password' => Hash::make($password),
                 'is_active' => $request->has('is_active') ? $validated['is_active'] : true,
             ]);
-            
+
             // Send welcome email to guest with credentials
             try {
                 Mail::to($user->email)->send(new \App\Mail\WelcomeMail($user, $defaultPassword));
@@ -502,20 +502,20 @@ class SuperAdminController extends Controller
                 // Don't fail the user creation if email fails
             }
         }
-        
+
         // Log activity
         $role = $validated['role'];
         ActivityLog::log('created', $user, "Created user: {$user->name} ({$user->email}) with role: {$role}");
         SystemLog::log('info', "User created: {$user->name} ({$user->email})", 'user_management', [
-            'user_id' => $user->id, 
+            'user_id' => $user->id,
             'role' => $role,
             'email_sent' => true,
-            'sms_sent' => in_array($role, ['super_admin', 'manager', 'reception', 'bar_keeper', 'head_chef', 'housekeeper', 'waiter']),
+            'sms_sent' => in_array($role, ['super_admin', 'manager', 'reception', 'bar_keeper', 'head_chef', 'housekeeper', 'waiter', 'storekeeper', 'accountant']),
         ]);
-        
+
         return redirect()->route('super_admin.users')->with('success', 'User created successfully. Welcome credentials have been sent.');
     }
-    
+
     /**
      * Show edit user form
      */
@@ -524,24 +524,24 @@ class SuperAdminController extends Controller
         // Try to find as Staff first
         $user = Staff::find($id);
         $userType = 'staff';
-        
+
         // If not found, try Guest
         if (!$user) {
             $user = Guest::find($id);
             $userType = 'guest';
         }
-        
+
         if (!$user) {
             return redirect()->route('super_admin.users')->with('error', 'User not found.');
         }
-        
+
         // Prevent editing super admin unless it's yourself
         if ($userType === 'staff' && $user->isSuperAdmin() && $user->id !== auth()->guard('staff')->id()) {
             return redirect()->route('super_admin.users')->with('error', 'Cannot edit other super admin accounts.');
         }
-        
+
         $roles = Role::where('is_system', false)->orWhereIn('name', ['manager', 'reception', 'guest'])->get();
-        
+
         return view('dashboard.super-admin.user-form', [
             'role' => 'super_admin',
             'userName' => auth()->guard('staff')->user()->name ?? 'Super Admin',
@@ -551,7 +551,7 @@ class SuperAdminController extends Controller
             'roles' => $roles,
         ]);
     }
-    
+
     /**
      * Update user
      */
@@ -560,22 +560,22 @@ class SuperAdminController extends Controller
         // Try to find as Staff first
         $user = Staff::find($id);
         $userType = 'staff';
-        
+
         // If not found, try Guest
         if (!$user) {
             $user = Guest::find($id);
             $userType = 'guest';
         }
-        
+
         if (!$user) {
             return redirect()->route('super_admin.users')->with('error', 'User not found.');
         }
-        
+
         // Prevent editing super admin unless it's yourself
         if ($userType === 'staff' && $user->isSuperAdmin() && $user->id !== auth()->guard('staff')->id()) {
             return redirect()->route('super_admin.users')->with('error', 'Cannot edit other super admin accounts.');
         }
-        
+
         // Build validation rules
         $rules = [
             'name' => 'required|string|max:255',
@@ -583,27 +583,27 @@ class SuperAdminController extends Controller
             'password' => 'nullable|string|min:8',
             'is_active' => 'boolean',
         ];
-        
+
         // Only require password confirmation if password is provided
         if ($request->filled('password')) {
             $rules['password'] = 'required|string|min:8|confirmed';
         }
-        
+
         // Email uniqueness check
         if ($userType === 'staff') {
             $rules['email'] = 'required|email|unique:staffs,email,' . $user->id . '|unique:guests,email';
-            $rules['role'] = 'required|string|in:super_admin,manager,reception,bar_keeper,head_chef,housekeeper,waiter';
+            $rules['role'] = 'required|string|in:super_admin,manager,reception,bar_keeper,head_chef,housekeeper,waiter,storekeeper,accountant';
         } else {
             $rules['email'] = 'required|email|unique:guests,email,' . $user->id . '|unique:staffs,email';
         }
-        
+
         $validated = $request->validate($rules);
-        
+
         $oldValues = $user->only(['name', 'email', 'phone', 'is_active']);
         if ($userType === 'staff') {
             $oldValues['role'] = $user->role;
         }
-        
+
         $user->name = $validated['name'];
         $user->email = $validated['email'];
         $user->phone = $validated['phone'];
@@ -611,13 +611,13 @@ class SuperAdminController extends Controller
             $user->role = $validated['role'];
         }
         $user->is_active = $request->has('is_active') ? $validated['is_active'] : false;
-        
+
         if ($request->filled('password')) {
             $user->password = Hash::make($validated['password']);
         }
-        
+
         $user->save();
-        
+
         // Log activity
         $newValues = $user->only(['name', 'email', 'is_active']);
         if ($userType === 'staff') {
@@ -625,10 +625,10 @@ class SuperAdminController extends Controller
         }
         ActivityLog::log('updated', $user, "Updated user: {$user->name} ({$user->email})", $oldValues, $newValues);
         SystemLog::log('info', "User updated: {$user->name} ({$user->email})", 'user_management', ['user_id' => $user->id]);
-        
+
         return redirect()->route('super_admin.users')->with('success', 'User updated successfully.');
     }
-    
+
     /**
      * Auto-generate and reset user password
      */
@@ -638,13 +638,13 @@ class SuperAdminController extends Controller
         // This handles ID collisions between Staff and Guest tables
         $staffUser = Staff::find($id);
         $guestUser = Guest::find($id);
-        
+
         // Determine which user exists (prioritize the one that was actually requested)
         // If both exist, we need to check the email or use a different method
         if ($staffUser && $guestUser) {
             // ID collision! Check if email is provided in request to determine which one
             $requestedEmail = $request->input('email') ?? $request->get('email');
-            
+
             if ($requestedEmail) {
                 if ($staffUser->email === $requestedEmail) {
                     $user = $staffUser;
@@ -688,7 +688,7 @@ class SuperAdminController extends Controller
             }
             return redirect()->route('super_admin.users')->with('error', 'User not found.');
         }
-        
+
         \Log::info('User identified for password reset', [
             'id' => $id,
             'user_type' => $userType,
@@ -696,10 +696,10 @@ class SuperAdminController extends Controller
             'user_name' => $user->name,
             'id_collision' => ($staffUser && $guestUser),
         ]);
-        
+
         // Auto-generate a secure random password (5 characters)
         $newPassword = \Illuminate\Support\Str::random(5);
-        
+
         // Log the generated password before saving
         \Log::info('Password reset initiated', [
             'user_id' => $user->id,
@@ -707,55 +707,55 @@ class SuperAdminController extends Controller
             'user_type' => get_class($user),
             'generated_password' => $newPassword,
         ]);
-        
+
         // FIXED APPROACH: Use direct DB update to bypass Eloquent's 'hashed' cast
         // The 'hashed' cast in Staff/Guest models would double-hash if we use Eloquent
         // Hash the password manually and save directly to database
         $hashedPassword = \Illuminate\Support\Facades\Hash::make($newPassword);
         $tableName = $userType === 'staff' ? 'staffs' : 'guests';
-        
+
         // Update password directly in database (bypasses Eloquent casts)
         $updated = \DB::table($tableName)
             ->where('id', $user->id)
             ->update(['password' => $hashedPassword]);
-        
+
         if ($updated === 0) {
             \Log::error('Password update failed - no rows affected', [
                 'user_id' => $user->id,
                 'table' => $tableName,
             ]);
-            
+
             if ($request->expectsJson() || $request->ajax() || $request->wantsJson()) {
                 return response()->json(['success' => false, 'message' => 'Failed to update password.'], 500);
             }
             return redirect()->route('super_admin.users')->with('error', 'Failed to update password.');
         }
-        
+
         // CRITICAL: Verify the password was saved correctly using raw DB value (most reliable)
         // We use raw DB value because Eloquent's 'hashed' cast might interfere when reading
         $rawPassword = \DB::table($tableName)->where('id', $id)->value('password');
         $passwordVerified = \Illuminate\Support\Facades\Hash::check($newPassword, $rawPassword);
-        
+
         \Log::info('Password reset completed', [
             'user_id' => $id,
             'user_email' => $user->email,
             'password_verified' => $passwordVerified,
             'generated_password' => $newPassword,
         ]);
-        
+
         if (!$passwordVerified) {
             \Log::error('CRITICAL: Password verification FAILED after reset!', [
                 'user_id' => $id,
                 'generated_password' => $newPassword,
                 'raw_db_hash' => $rawPassword ? substr($rawPassword, 0, 60) : 'NULL',
             ]);
-            
+
             if ($request->expectsJson() || $request->ajax() || $request->wantsJson()) {
                 return response()->json(['success' => false, 'message' => 'Password was generated but verification failed. Please try again.'], 500);
             }
             return redirect()->route('super_admin.users')->with('error', 'Password was generated but verification failed. Please try again.');
         }
-        
+
         // CRITICAL: Store the ORIGINAL user data BEFORE clearing cache
         // This ensures we log the correct user whose password was reset
         $originalUserData = [
@@ -764,28 +764,28 @@ class SuperAdminController extends Controller
             'email' => $user->email,
             'type' => $userType,
         ];
-        
+
         \Log::info('User data for logging', [
             'original_user_id' => $originalUserData['id'],
             'original_user_name' => $originalUserData['name'],
             'original_user_email' => $originalUserData['email'],
             'original_user_type' => $originalUserData['type'],
         ]);
-        
+
         // Clear model cache to ensure fresh data
         if ($userType === 'staff') {
             Staff::clearBootedModels();
         } else {
             Guest::clearBootedModels();
         }
-        
+
         // Get fresh instance for verification (but we'll use original data for logging)
         if ($userType === 'staff') {
             $freshUser = Staff::find($id);
         } else {
             $freshUser = Guest::find($id);
         }
-        
+
         // Verify fresh user matches original
         if ($freshUser && ($freshUser->id !== $originalUserData['id'] || $freshUser->email !== $originalUserData['email'])) {
             \Log::error('User mismatch after cache clear!', [
@@ -795,44 +795,44 @@ class SuperAdminController extends Controller
                 'fresh_email' => $freshUser->email,
             ]);
         }
-        
+
         // Use original user data for logging to ensure accuracy
         $userForLogging = $freshUser ?? $user;
-        
+
         if (!$userForLogging) {
             \Log::error('Failed to retrieve user after password update', [
                 'user_id' => $id,
                 'user_type' => $userType,
             ]);
-            
+
             if ($request->expectsJson() || $request->ajax() || $request->wantsJson()) {
                 return response()->json(['success' => false, 'message' => 'Failed to retrieve user after password update.'], 500);
             }
             return redirect()->route('super_admin.users')->with('error', 'Failed to retrieve user after password update.');
         }
-        
+
         // Log activity with the CORRECT user (using original data to ensure accuracy)
         $authUser = auth()->guard('staff')->user();
         // Store old password hash (masked) and new password info in details
         $oldValues = ['password' => '***hidden***'];
         $newValues = ['password' => '***auto-generated***', 'password_length' => strlen($newPassword)];
-        
+
         // Use original user data for description to ensure correct user is logged
         $logDescription = "Auto-generated and reset password for user: {$originalUserData['name']} ({$originalUserData['email']})";
-        
+
         ActivityLog::log('reset_password', $userForLogging, $logDescription, $oldValues, $newValues);
-        
+
         SystemLog::log('warning', "Password auto-generated and reset for user: {$originalUserData['name']} ({$originalUserData['email']})", 'security', [
             'user_id' => $originalUserData['id'],
-            'user_email' => $originalUserData['email'], 
-            'user_type' => $originalUserData['type'], 
+            'user_email' => $originalUserData['email'],
+            'user_type' => $originalUserData['type'],
             'user_name' => $originalUserData['name'],
-            'new_password' => $newPassword, 
+            'new_password' => $newPassword,
             'action_by' => $authUser ? $authUser->id : null,
             'action_by_email' => $authUser ? $authUser->email : null,
             'action' => 'password_reset_by_admin',
         ]);
-        
+
         // Send SMS to staff if applicable
         if ($originalUserData['type'] === 'staff' && !empty($userForLogging->phone)) {
             try {
@@ -843,7 +843,7 @@ class SuperAdminController extends Controller
                 Log::error('Failed to send password reset SMS', ['user_id' => $userForLogging->id, 'error' => $e->getMessage()]);
             }
         }
-        
+
         // If AJAX request, return JSON
         if ($request->expectsJson() || $request->ajax() || $request->wantsJson()) {
             return response()->json([
@@ -855,11 +855,11 @@ class SuperAdminController extends Controller
                 'verified' => true,
             ]);
         }
-        
+
         // Return the generated password so it can be displayed to the admin
         return redirect()->back()->with('success', "Password auto-generated and reset successfully for {$user->name}.")->with('generated_password', $newPassword)->with('user_email', $user->email);
     }
-    
+
     /**
      * Delete user
      */
@@ -868,40 +868,40 @@ class SuperAdminController extends Controller
         // Try to find as Staff first
         $user = Staff::find($id);
         $userType = 'staff';
-        
+
         // If not found, try Guest
         if (!$user) {
             $user = Guest::find($id);
             $userType = 'guest';
         }
-        
+
         if (!$user) {
             return redirect()->route('super_admin.users')->with('error', 'User not found.');
         }
-        
+
         // Prevent deleting super admin
         if ($userType === 'staff' && $user->isSuperAdmin()) {
             return redirect()->route('super_admin.users')->with('error', 'Cannot delete super admin accounts.');
         }
-        
+
         // Prevent deleting yourself
         $authUser = auth()->guard('staff')->user();
         if ($authUser && $user->id === $authUser->id) {
             return redirect()->route('super_admin.users')->with('error', 'Cannot delete your own account.');
         }
-        
+
         $userName = $user->name;
         $userEmail = $user->email;
-        
+
         // Log before deletion
         ActivityLog::log('deleted', null, "Deleted user: {$userName} ({$userEmail})");
         SystemLog::log('warning', "User deleted: {$userName} ({$userEmail})", 'user_management', ['user_id' => $user->id]);
-        
+
         $user->delete();
-        
+
         return redirect()->route('super_admin.users')->with('success', 'User deleted successfully.');
     }
-    
+
     /**
      * Display roles management
      */
@@ -909,10 +909,10 @@ class SuperAdminController extends Controller
     {
         // Get all roles with optimized queries
         $roles = Role::orderBy('name')->get();
-        
+
         // Pre-calculate permission counts and user counts for all roles in one query
         $roleIds = $roles->pluck('id');
-        
+
         // Get all permission counts in one query
         $permissionCounts = \DB::table('role_permission')
             ->whereIn('role_id', $roleIds)
@@ -920,27 +920,27 @@ class SuperAdminController extends Controller
             ->groupBy('role_id')
             ->pluck('count', 'role_id')
             ->toArray();
-        
+
         // Get all staff role counts in optimized queries
         $staffRoleCounts = [];
         $allStaffRoles = \App\Models\Staff::select('role')
             ->whereNotNull('role')
             ->get()
-            ->groupBy(function($staff) {
+            ->groupBy(function ($staff) {
                 return strtolower(str_replace([' ', '_'], '', trim($staff->role)));
             });
-        
+
         // Get guest count (only for guest role)
         $guestCount = \App\Models\Guest::count();
-        
+
         // Attach counts to roles
         foreach ($roles as $role) {
             $role->permission_count = $permissionCounts[$role->id] ?? 0;
-            
+
             // Calculate user count efficiently
             $roleNameNormalized = strtolower(str_replace([' ', '_'], '', trim($role->name)));
             $staffCount = 0;
-            
+
             // Count staff with matching role
             if ($allStaffRoles->has($roleNameNormalized)) {
                 $staffCount = $allStaffRoles->get($roleNameNormalized)->count();
@@ -948,7 +948,7 @@ class SuperAdminController extends Controller
                 // Fallback: check exact match
                 $staffCount = \App\Models\Staff::where('role', $role->name)->count();
             }
-            
+
             // Add guest count if this is the guest role
             if ($roleNameNormalized === 'guest') {
                 $role->user_count = $staffCount + $guestCount;
@@ -960,29 +960,29 @@ class SuperAdminController extends Controller
                 $role->guest_count = 0;
             }
         }
-        
+
         // Pre-load all permissions grouped by group for the modals (optimize modal queries)
         // Filter out blog permissions as they are no longer used
         $allPermissions = \App\Models\Permission::where('name', 'not like', '%blog%')
-            ->where(function($query) {
+            ->where(function ($query) {
                 $query->where('group', 'not like', '%blog%')
-                      ->where('group', '!=', 'Blog');
+                    ->where('group', '!=', 'Blog');
             })
             ->orderBy('group')
             ->orderBy('name')
             ->get()
             ->groupBy('group');
-        
+
         // Pre-load role-permission mappings for all roles
         $allRolePermissions = \DB::table('role_permission')
             ->whereIn('role_id', $roleIds)
             ->get()
             ->groupBy('role_id')
-            ->map(function($permissions) {
+            ->map(function ($permissions) {
                 return $permissions->pluck('permission_id')->map('intval')->toArray();
             })
             ->toArray();
-        
+
         return view('dashboard.super-admin.roles', [
             'role' => 'super_admin',
             'userName' => (auth()->guard('staff')->user() ?? auth()->guard('guest')->user())->name ?? 'Super Admin',
@@ -992,7 +992,7 @@ class SuperAdminController extends Controller
             'allRolePermissions' => $allRolePermissions,
         ]);
     }
-    
+
     /**
      * Store new role
      */
@@ -1003,15 +1003,15 @@ class SuperAdminController extends Controller
             'display_name' => 'required|string|max:255',
             'description' => 'nullable|string',
         ]);
-        
+
         $role = Role::create($validated);
-        
+
         ActivityLog::log('created', $role, "Created role: {$role->name}");
         SystemLog::log('info', "Role created: {$role->name}", 'role_management');
-        
+
         return redirect()->route('super_admin.roles')->with('success', 'Role created successfully.');
     }
-    
+
     /**
      * Update role
      */
@@ -1021,19 +1021,19 @@ class SuperAdminController extends Controller
         if ($role->is_system) {
             return redirect()->route('super_admin.roles')->with('error', 'Cannot edit system roles.');
         }
-        
+
         $validated = $request->validate([
             'display_name' => 'required|string|max:255',
             'description' => 'nullable|string',
         ]);
-        
+
         $role->update($validated);
-        
+
         ActivityLog::log('updated', $role, "Updated role: {$role->name}");
-        
+
         return redirect()->route('super_admin.roles')->with('success', 'Role updated successfully.');
     }
-    
+
     /**
      * Delete role
      */
@@ -1043,24 +1043,24 @@ class SuperAdminController extends Controller
         if ($role->is_system) {
             return redirect()->route('super_admin.roles')->with('error', 'Cannot delete system roles.');
         }
-        
+
         // Check if role has users (staff or guests)
         $staffCount = Staff::where('role', $role->name)->count();
         $userCount = User::where('role', $role->name)->count();
-        
+
         if ($staffCount > 0 || $userCount > 0) {
             return redirect()->route('super_admin.roles')->with('error', "Cannot delete role with assigned users. ({$staffCount} staff, {$userCount} guests)");
         }
-        
+
         $roleName = $role->name;
         $role->delete();
-        
+
         ActivityLog::log('deleted', null, "Deleted role: {$roleName}");
         SystemLog::log('warning', "Role deleted: {$roleName}", 'role_management');
-        
+
         return redirect()->route('super_admin.roles')->with('success', 'Role deleted successfully.');
     }
-    
+
     /**
      * Display permissions management
      */
@@ -1069,23 +1069,23 @@ class SuperAdminController extends Controller
         // Filter out blog permissions as they are no longer used
         $permissions = Permission::with('roles')
             ->where('name', 'not like', '%blog%')
-            ->where(function($query) {
+            ->where(function ($query) {
                 $query->where('group', 'not like', '%blog%')
-                      ->where('group', '!=', 'Blog');
+                    ->where('group', '!=', 'Blog');
             })
             ->orderBy('group')
             ->orderBy('name')
             ->get();
         // Filter out blog group
         $groups = Permission::where('name', 'not like', '%blog%')
-            ->where(function($query) {
+            ->where(function ($query) {
                 $query->where('group', 'not like', '%blog%')
-                      ->where('group', '!=', 'Blog');
+                    ->where('group', '!=', 'Blog');
             })
             ->distinct()
             ->pluck('group')
             ->filter();
-        
+
         return view('dashboard.super-admin.permissions', [
             'role' => 'super_admin',
             'userName' => (auth()->guard('staff')->user() ?? auth()->guard('guest')->user())->name ?? 'Super Admin',
@@ -1094,7 +1094,7 @@ class SuperAdminController extends Controller
             'groups' => $groups,
         ]);
     }
-    
+
     /**
      * Store new permission
      */
@@ -1106,14 +1106,14 @@ class SuperAdminController extends Controller
             'description' => 'nullable|string',
             'group' => 'nullable|string|max:255',
         ]);
-        
+
         $permission = Permission::create($validated);
-        
+
         ActivityLog::log('created', $permission, "Created permission: {$permission->name}");
-        
+
         return redirect()->route('super_admin.permissions')->with('success', 'Permission created successfully.');
     }
-    
+
     /**
      * Update permission
      */
@@ -1124,14 +1124,14 @@ class SuperAdminController extends Controller
             'description' => 'nullable|string',
             'group' => 'nullable|string|max:255',
         ]);
-        
+
         $permission->update($validated);
-        
+
         ActivityLog::log('updated', $permission, "Updated permission: {$permission->name}");
-        
+
         return redirect()->route('super_admin.permissions')->with('success', 'Permission updated successfully.');
     }
-    
+
     /**
      * Assign permissions to role
      */
@@ -1141,33 +1141,33 @@ class SuperAdminController extends Controller
             'permissions' => 'nullable|array',
             'permissions.*' => 'exists:permissions,id',
         ]);
-        
+
         // Sync permissions (empty array means no permissions)
         $permissions = $validated['permissions'] ?? [];
-        
+
         // Convert string IDs to integers if needed
         $permissionIds = array_map('intval', $permissions);
-        
+
         // Log before sync for debugging
         Log::info("Assigning permissions to role ID {$role->id} ({$role->name}): " . json_encode($permissionIds));
-        
+
         // Sync permissions - this will replace all existing permissions
         $synced = $role->permissions()->sync($permissionIds);
-        
+
         // Log the sync result
         Log::info("Sync result for role {$role->id}: attached=" . count($synced['attached'] ?? []) . ", detached=" . count($synced['detached'] ?? []) . ", updated=" . count($synced['updated'] ?? []));
-        
+
         // Verify the permissions were saved by querying the database directly
         $savedCount = DB::table('role_permission')
             ->where('role_id', $role->id)
             ->count();
-        
+
         Log::info("Verified permissions count for role {$role->id} after sync: {$savedCount}");
-        
+
         // Refresh the role to get updated permissions
         $role->refresh();
         $role->load('permissions');
-        
+
         // Clear cache to ensure permission changes are reflected immediately
         // Note: Using Cache::flush() instead of tags since not all cache drivers support tagging
         try {
@@ -1176,19 +1176,19 @@ class SuperAdminController extends Controller
             // If cache flush fails, continue anyway - permissions are still updated
             Log::warning('Cache flush failed after permission update: ' . $e->getMessage());
         }
-        
+
         // Clear any relationship cache for the role
         $role->unsetRelation('permissions');
-        
+
         ActivityLog::log('updated', $role, "Updated permissions for role: {$role->name} ({$savedCount} permissions assigned)");
-        
+
         $attachedCount = count($synced['attached'] ?? []);
         $detachedCount = count($synced['detached'] ?? []);
-        
-        $message = $savedCount > 0 
+
+        $message = $savedCount > 0
             ? "✅ Permissions assigned successfully! {$savedCount} permission(s) are now active for this role. Sidebar menu items will appear/hide based on these permissions. Users with this role should refresh their dashboard to see the changes."
             : "⚠️ Permissions updated. No permissions are currently assigned to this role. All sidebar menu items (except Dashboard) will be hidden for users with this role.";
-        
+
         if ($attachedCount > 0 || $detachedCount > 0) {
             $changes = [];
             if ($attachedCount > 0) {
@@ -1199,32 +1199,32 @@ class SuperAdminController extends Controller
             }
             $message .= " (" . implode(", ", $changes) . ")";
         }
-        
+
         return redirect()->route('super_admin.roles')->with('success', $message);
     }
-    
+
     /**
      * Display activity logs
      */
     public function activityLogs(Request $request)
     {
         $query = ActivityLog::query();
-        
+
         // Filter by user
         if ($request->has('user_id') && $request->user_id) {
             $query->where('user_id', $request->user_id);
         }
-        
+
         // Filter by action
         if ($request->has('action') && $request->action) {
             $query->where('action', $request->action);
         }
-        
+
         // Filter by model
         if ($request->has('model_type') && $request->model_type) {
             $query->where('model_type', $request->model_type);
         }
-        
+
         // Date range
         if ($request->has('date_from') && $request->date_from) {
             $query->whereDate('created_at', '>=', $request->date_from);
@@ -1232,21 +1232,21 @@ class SuperAdminController extends Controller
         if ($request->has('date_to') && $request->date_to) {
             $query->whereDate('created_at', '<=', $request->date_to);
         }
-        
+
         // Get all logs for client-side filtering (no pagination)
         $logs = $query->orderBy('created_at', 'desc')->get();
-        
+
         // Get filter options - combine Staff and Guest users
-        $staffUsers = Staff::select('id', 'name', 'email')->get()->map(function($user) {
+        $staffUsers = Staff::select('id', 'name', 'email')->get()->map(function ($user) {
             return ['id' => $user->id, 'name' => $user->name, 'email' => $user->email];
         });
-        $guestUsers = Guest::select('id', 'name', 'email')->get()->map(function($user) {
+        $guestUsers = Guest::select('id', 'name', 'email')->get()->map(function ($user) {
             return ['id' => $user->id, 'name' => $user->name, 'email' => $user->email];
         });
         $users = $staffUsers->concat($guestUsers)->sortBy('name')->values();
         $actions = ActivityLog::distinct()->pluck('action')->sort();
         $modelTypes = ActivityLog::distinct()->pluck('model_type')->filter()->sort();
-        
+
         return view('dashboard.super-admin.activity-logs', [
             'role' => 'super_admin',
             'userName' => (auth()->guard('staff')->user() ?? auth()->guard('guest')->user())->name ?? 'Super Admin',
@@ -1257,24 +1257,24 @@ class SuperAdminController extends Controller
             'modelTypes' => $modelTypes,
         ]);
     }
-    
+
     /**
      * Display system logs
      */
     public function systemLogs(Request $request)
     {
         $query = SystemLog::query();
-        
+
         // Filter by level
         if ($request->has('level') && $request->level) {
             $query->where('level', $request->level);
         }
-        
+
         // Filter by channel
         if ($request->has('channel') && $request->channel) {
             $query->where('channel', $request->channel);
         }
-        
+
         // Date range
         if ($request->has('date_from') && $request->date_from) {
             $query->whereDate('created_at', '>=', $request->date_from);
@@ -1282,13 +1282,13 @@ class SuperAdminController extends Controller
         if ($request->has('date_to') && $request->date_to) {
             $query->whereDate('created_at', '<=', $request->date_to);
         }
-        
+
         $logs = $query->orderBy('created_at', 'desc')->paginate(15);
-        
+
         // Get filter options
         $levels = SystemLog::distinct()->pluck('level')->sort();
         $channels = SystemLog::distinct()->pluck('channel')->filter()->sort();
-        
+
         return view('dashboard.super-admin.system-logs', [
             'role' => 'super_admin',
             'userName' => (auth()->guard('staff')->user() ?? auth()->guard('guest')->user())->name ?? 'Super Admin',
@@ -1299,52 +1299,52 @@ class SuperAdminController extends Controller
             'filters' => $request->only(['level', 'channel', 'date_from', 'date_to']),
         ]);
     }
-    
+
     /**
      * Export activity logs
      */
     public function exportActivityLogs(Request $request)
     {
         $query = ActivityLog::query();
-        
+
         // Apply same filters as activityLogs method
         if ($request->has('user_id') && $request->user_id) {
             $query->where('user_id', $request->user_id);
         }
-        
+
         if ($request->has('action') && $request->action) {
             $query->where('action', $request->action);
         }
-        
+
         if ($request->has('model_type') && $request->model_type) {
             $query->where('model_type', $request->model_type);
         }
-        
+
         if ($request->has('date_from') && $request->date_from) {
             $query->whereDate('created_at', '>=', $request->date_from);
         }
         if ($request->has('date_to') && $request->date_to) {
             $query->whereDate('created_at', '<=', $request->date_to);
         }
-        
+
         $logs = $query->orderBy('created_at', 'desc')->get();
-        
+
         // Generate CSV filename with timestamp
         $filename = 'activity_logs_' . now()->format('Y-m-d_His') . '.csv';
-        
+
         // Set headers for CSV download
         $headers = [
             'Content-Type' => 'text/csv',
             'Content-Disposition' => 'attachment; filename="' . $filename . '"',
         ];
-        
+
         // Create CSV content
-        $callback = function() use ($logs) {
+        $callback = function () use ($logs) {
             $file = fopen('php://output', 'w');
-            
+
             // Add BOM for UTF-8 to ensure Excel displays correctly
-            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
-            
+            fprintf($file, chr(0xEF) . chr(0xBB) . chr(0xBF));
+
             // CSV Headers
             fputcsv($file, [
                 'Timestamp',
@@ -1359,7 +1359,7 @@ class SuperAdminController extends Controller
                 'Old Values',
                 'New Values'
             ]);
-            
+
             // CSV Data
             foreach ($logs as $log) {
                 fputcsv($file, [
@@ -1376,10 +1376,10 @@ class SuperAdminController extends Controller
                     $log->new_values ? json_encode($log->new_values, JSON_UNESCAPED_UNICODE) : ''
                 ]);
             }
-            
+
             fclose($file);
         };
-        
+
         // Log the export activity
         ActivityLog::create([
             'user_id' => auth()->id(),
@@ -1388,10 +1388,10 @@ class SuperAdminController extends Controller
             'ip_address' => $request->ip(),
             'user_agent' => $request->userAgent(),
         ]);
-        
+
         return response()->stream($callback, 200, $headers);
     }
-    
+
     /**
      * Clear old logs
      */
@@ -1402,32 +1402,32 @@ class SuperAdminController extends Controller
                 'type' => 'required|in:activity,system,both',
                 'days' => 'required|integer|min:1|max:365',
             ]);
-            
+
             $date = Carbon::now()->subDays($validated['days']);
             $deletedCount = 0;
             $activityCount = 0;
             $systemCount = 0;
-            
+
             // Count records before deletion
             if ($validated['type'] === 'activity' || $validated['type'] === 'both') {
                 $activityCount = ActivityLog::where('created_at', '<', $date)->count();
             }
-            
+
             if ($validated['type'] === 'system' || $validated['type'] === 'both') {
                 $systemCount = SystemLog::where('created_at', '<', $date)->count();
             }
-            
+
             $deletedCount = $activityCount + $systemCount;
-            
+
             // Delete the logs
             if ($validated['type'] === 'activity' || $validated['type'] === 'both') {
                 ActivityLog::where('created_at', '<', $date)->delete();
             }
-            
+
             if ($validated['type'] === 'system' || $validated['type'] === 'both') {
                 SystemLog::where('created_at', '<', $date)->delete();
             }
-            
+
             // Log the clearing activity AFTER deletion (so it's not deleted)
             ActivityLog::create([
                 'user_id' => auth()->id(),
@@ -1436,7 +1436,7 @@ class SuperAdminController extends Controller
                 'ip_address' => $request->ip(),
                 'user_agent' => $request->userAgent(),
             ]);
-            
+
             // Log to system logs (only if not clearing system logs)
             if ($validated['type'] !== 'system') {
                 try {
@@ -1446,10 +1446,10 @@ class SuperAdminController extends Controller
                     Log::warning('Failed to log system log entry: ' . $e->getMessage());
                 }
             }
-            
+
             $message = "Successfully cleared {$deletedCount} log records older than {$validated['days']} days.";
             return redirect()->back()->with('success', $message);
-            
+
         } catch (\Illuminate\Validation\ValidationException $e) {
             return redirect()->back()->withErrors($e->errors())->withInput();
         } catch (\Exception $e) {
@@ -1457,7 +1457,7 @@ class SuperAdminController extends Controller
                 'exception' => $e,
                 'request' => $request->all(),
             ]);
-            
+
             return redirect()->back()->with('error', 'Failed to clear logs: ' . $e->getMessage());
         }
     }
@@ -1470,7 +1470,7 @@ class SuperAdminController extends Controller
     public function systemSettings()
     {
         $settings = HotelSetting::all()->pluck('value', 'key');
-        
+
         return view('dashboard.super-admin.system-settings', [
             'role' => 'super_admin',
             'userName' => (auth()->guard('staff')->user() ?? auth()->guard('guest')->user())->name ?? 'Super Admin',
@@ -1598,7 +1598,7 @@ class SuperAdminController extends Controller
 
         // Get all active session IDs for matching
         $activeSessionIds = $allActiveSessions->pluck('id')->toArray();
-        
+
         $sessions = [];
         $processedEmails = []; // Track processed emails to avoid duplicates
 
@@ -1627,12 +1627,12 @@ class SuperAdminController extends Controller
                 ->whereNotNull('session_token')
                 ->whereIn('last_session_id', $activeSessionIds)
                 ->get();
-            
+
             foreach ($staffWithActiveSessions as $staff) {
                 if (!isset($processedEmails[$staff->email])) {
                     // Find the session for this user
                     $userSession = $allActiveSessions->firstWhere('id', $staff->last_session_id);
-                    
+
                     $sessions[] = [
                         'session_id' => $staff->last_session_id,
                         'user' => $staff,
@@ -1643,17 +1643,17 @@ class SuperAdminController extends Controller
                     $processedEmails[$staff->email] = true;
                 }
             }
-            
+
             $guestsWithActiveSessions = Guest::whereNotNull('last_session_id')
                 ->whereNotNull('session_token')
                 ->whereIn('last_session_id', $activeSessionIds)
                 ->get();
-            
+
             foreach ($guestsWithActiveSessions as $guest) {
                 if (!isset($processedEmails[$guest->email])) {
                     // Find the session for this user
                     $userSession = $allActiveSessions->firstWhere('id', $guest->last_session_id);
-                    
+
                     $sessions[] = [
                         'session_id' => $guest->last_session_id,
                         'user' => $guest,
@@ -1667,7 +1667,7 @@ class SuperAdminController extends Controller
         }
 
         // Sort by last activity (most recent first)
-        usort($sessions, function($a, $b) {
+        usort($sessions, function ($a, $b) {
             return $b['last_activity']->timestamp <=> $a['last_activity']->timestamp;
         });
 
@@ -1683,7 +1683,7 @@ class SuperAdminController extends Controller
     {
         // Get user before deleting session
         $session = DB::table('sessions')->where('id', $sessionId)->first();
-        
+
         // Delete the session
         DB::table('sessions')->where('id', $sessionId)->delete();
 
@@ -1709,7 +1709,7 @@ class SuperAdminController extends Controller
     public function forceLogoutUser($userId)
     {
         $user = User::findOrFail($userId);
-        
+
         // Clear user session token
         $user->update([
             'session_token' => null,
@@ -1867,10 +1867,10 @@ class SuperAdminController extends Controller
     {
         // Get server resource information
         $serverInfo = $this->getServerResources();
-        
+
         // Get database statistics
         $dbStats = $this->getDatabaseStats();
-        
+
         // Get PHP information
         $phpInfo = [
             'version' => PHP_VERSION,
@@ -1881,7 +1881,7 @@ class SuperAdminController extends Controller
             'current_memory_usage' => $this->formatBytes(memory_get_usage(true)),
             'peak_memory_usage' => $this->formatBytes(memory_get_peak_usage(true)),
         ];
-        
+
         return view('dashboard.super-admin.system-health', [
             'role' => 'super_admin',
             'userName' => (auth()->guard('staff')->user() ?? auth()->guard('guest')->user())->name ?? 'Super Admin',
@@ -1891,7 +1891,7 @@ class SuperAdminController extends Controller
             'phpInfo' => $phpInfo,
         ]);
     }
-    
+
     /**
      * Get server resource information
      */
@@ -1904,7 +1904,7 @@ class SuperAdminController extends Controller
             'server_time' => now()->format('Y-m-d H:i:s'),
             'timezone' => date_default_timezone_get(),
         ];
-        
+
         // Memory Information
         $info['memory'] = [
             'total' => $this->getTotalMemory(),
@@ -1912,19 +1912,19 @@ class SuperAdminController extends Controller
             'used' => $this->getUsedMemory(),
             'usage_percent' => $this->getMemoryUsagePercent(),
         ];
-        
+
         // CPU Information (if available)
         $info['cpu'] = $this->getCpuInfo();
-        
+
         // Disk Information
         $info['disk'] = $this->getDiskInfo();
-        
+
         // Uptime (if available)
         $info['uptime'] = $this->getUptime();
-        
+
         return $info;
     }
-    
+
     /**
      * Get total system memory
      */
@@ -1937,7 +1937,7 @@ class SuperAdminController extends Controller
                 $lines = array_filter(array_map('trim', explode("\n", $output)));
                 foreach ($lines as $line) {
                     if (is_numeric($line) && $line > 0) {
-                        return $this->formatBytes((int)$line);
+                        return $this->formatBytes((int) $line);
                     }
                 }
             }
@@ -1953,7 +1953,7 @@ class SuperAdminController extends Controller
         }
         return 'N/A';
     }
-    
+
     /**
      * Get free system memory
      */
@@ -1966,7 +1966,7 @@ class SuperAdminController extends Controller
                 $lines = array_filter(array_map('trim', explode("\n", $output)));
                 foreach ($lines as $line) {
                     if (is_numeric($line) && $line > 0) {
-                        return $this->formatBytes((int)$line * 1024);
+                        return $this->formatBytes((int) $line * 1024);
                     }
                 }
             }
@@ -1982,7 +1982,7 @@ class SuperAdminController extends Controller
         }
         return 'N/A';
     }
-    
+
     /**
      * Get used system memory
      */
@@ -1995,7 +1995,7 @@ class SuperAdminController extends Controller
         }
         return 'N/A';
     }
-    
+
     /**
      * Get memory usage percentage
      */
@@ -2008,7 +2008,7 @@ class SuperAdminController extends Controller
         }
         return 0;
     }
-    
+
     /**
      * Get total memory in bytes
      */
@@ -2021,7 +2021,7 @@ class SuperAdminController extends Controller
                 $lines = array_filter(array_map('trim', explode("\n", $output)));
                 foreach ($lines as $line) {
                     if (is_numeric($line) && $line > 0) {
-                        return (int)$line;
+                        return (int) $line;
                     }
                 }
             }
@@ -2030,13 +2030,13 @@ class SuperAdminController extends Controller
             if ($meminfo) {
                 preg_match('/MemTotal:\s+(\d+)\s+kB/', $meminfo, $matches);
                 if (isset($matches[1])) {
-                    return (int)$matches[1] * 1024;
+                    return (int) $matches[1] * 1024;
                 }
             }
         }
         return 0;
     }
-    
+
     /**
      * Get free memory in bytes
      */
@@ -2049,7 +2049,7 @@ class SuperAdminController extends Controller
                 $lines = array_filter(array_map('trim', explode("\n", $output)));
                 foreach ($lines as $line) {
                     if (is_numeric($line) && $line > 0) {
-                        return (int)$line * 1024;
+                        return (int) $line * 1024;
                     }
                 }
             }
@@ -2058,13 +2058,13 @@ class SuperAdminController extends Controller
             if ($meminfo) {
                 preg_match('/MemAvailable:\s+(\d+)\s+kB/', $meminfo, $matches);
                 if (isset($matches[1])) {
-                    return (int)$matches[1] * 1024;
+                    return (int) $matches[1] * 1024;
                 }
             }
         }
         return 0;
     }
-    
+
     /**
      * Get CPU information
      */
@@ -2075,7 +2075,7 @@ class SuperAdminController extends Controller
             'cores' => 'N/A',
             'model' => 'N/A',
         ];
-        
+
         if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
             // Windows - Get CPU cores
             $output = \shell_exec('wmic cpu get NumberOfCores 2>nul');
@@ -2083,14 +2083,14 @@ class SuperAdminController extends Controller
                 $cores = trim(explode("\n", $output)[1]);
                 $info['cores'] = $cores ?: 'N/A';
             }
-            
+
             // Windows - Get CPU model
             $output = \shell_exec('wmic cpu get Name 2>nul');
             if ($output) {
                 $model = trim(explode("\n", $output)[1]);
                 $info['model'] = $model ?: 'N/A';
             }
-            
+
             // Windows - CPU usage (requires additional tools or WMI queries)
             $info['usage_percent'] = 'N/A (Requires additional monitoring)';
         } else {
@@ -2099,23 +2099,23 @@ class SuperAdminController extends Controller
             if ($cores) {
                 $info['cores'] = trim($cores);
             }
-            
+
             // Linux - Get CPU model
             $model = @\shell_exec("grep 'model name' /proc/cpuinfo | head -1 | cut -d':' -f2");
             if ($model) {
                 $info['model'] = trim($model);
             }
-            
+
             // Linux - Get CPU usage
             $load = sys_getloadavg();
             if ($load) {
                 $info['usage_percent'] = round(($load[0] / $info['cores']) * 100, 2);
             }
         }
-        
+
         return $info;
     }
-    
+
     /**
      * Get disk information
      */
@@ -2125,7 +2125,7 @@ class SuperAdminController extends Controller
         $total = disk_total_space($diskPath);
         $free = disk_free_space($diskPath);
         $used = $total - $free;
-        
+
         return [
             'total' => $this->formatBytes($total),
             'free' => $this->formatBytes($free),
@@ -2134,7 +2134,7 @@ class SuperAdminController extends Controller
             'path' => $diskPath,
         ];
     }
-    
+
     /**
      * Get system uptime
      */
@@ -2153,7 +2153,7 @@ class SuperAdminController extends Controller
                     $hour = substr($bootTime, 8, 2);
                     $minute = substr($bootTime, 10, 2);
                     $second = substr($bootTime, 12, 2);
-                    
+
                     $bootTimestamp = strtotime("{$year}-{$month}-{$day} {$hour}:{$minute}:{$second}");
                     $uptime = time() - $bootTimestamp;
                     return $this->formatUptime($uptime);
@@ -2163,13 +2163,13 @@ class SuperAdminController extends Controller
             // Linux
             $uptime = @file_get_contents('/proc/uptime');
             if ($uptime) {
-                $seconds = (float)explode(' ', $uptime)[0];
+                $seconds = (float) explode(' ', $uptime)[0];
                 return $this->formatUptime($seconds);
             }
         }
         return 'N/A';
     }
-    
+
     /**
      * Format uptime
      */
@@ -2178,15 +2178,18 @@ class SuperAdminController extends Controller
         $days = floor($seconds / 86400);
         $hours = floor(($seconds % 86400) / 3600);
         $minutes = floor(($seconds % 3600) / 60);
-        
+
         $result = [];
-        if ($days > 0) $result[] = $days . ' day' . ($days > 1 ? 's' : '');
-        if ($hours > 0) $result[] = $hours . ' hour' . ($hours > 1 ? 's' : '');
-        if ($minutes > 0) $result[] = $minutes . ' minute' . ($minutes > 1 ? 's' : '');
-        
+        if ($days > 0)
+            $result[] = $days . ' day' . ($days > 1 ? 's' : '');
+        if ($hours > 0)
+            $result[] = $hours . ' hour' . ($hours > 1 ? 's' : '');
+        if ($minutes > 0)
+            $result[] = $minutes . ' minute' . ($minutes > 1 ? 's' : '');
+
         return !empty($result) ? implode(', ', $result) : 'Less than a minute';
     }
-    
+
     /**
      * Get database statistics
      */
@@ -2194,19 +2197,19 @@ class SuperAdminController extends Controller
     {
         try {
             $dbName = DB::connection()->getDatabaseName();
-            
+
             // Get database size
             $dbSize = DB::select("SELECT 
                 ROUND(SUM(data_length + index_length) / 1024 / 1024, 2) AS 'size_mb'
                 FROM information_schema.tables 
                 WHERE table_schema = ?", [$dbName]);
-            
+
             $size = $dbSize[0]->size_mb ?? 0;
-            
+
             // Get table counts
             $tables = DB::select("SELECT COUNT(*) as count FROM information_schema.tables WHERE table_schema = ?", [$dbName]);
             $tableCount = $tables[0]->count ?? 0;
-            
+
             // Get total records
             $totalRecords = 0;
             $tableList = DB::select("SELECT table_name FROM information_schema.tables WHERE table_schema = ?", [$dbName]);
@@ -2218,7 +2221,7 @@ class SuperAdminController extends Controller
                     // Skip tables that can't be counted
                 }
             }
-            
+
             return [
                 'name' => $dbName,
                 'size' => $this->formatBytes($size * 1024 * 1024),
@@ -2236,7 +2239,7 @@ class SuperAdminController extends Controller
             ];
         }
     }
-    
+
     /**
      * Format bytes to human readable format
      */
@@ -2245,14 +2248,14 @@ class SuperAdminController extends Controller
         if ($bytes === 0 || $bytes === 'N/A') {
             return '0 B';
         }
-        
-        $bytes = (float)$bytes;
+
+        $bytes = (float) $bytes;
         $units = ['B', 'KB', 'MB', 'GB', 'TB'];
-        
+
         for ($i = 0; $bytes > 1024 && $i < count($units) - 1; $i++) {
             $bytes /= 1024;
         }
-        
+
         return round($bytes, $precision) . ' ' . $units[$i];
     }
 }

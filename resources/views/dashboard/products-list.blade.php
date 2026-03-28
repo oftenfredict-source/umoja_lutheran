@@ -163,6 +163,7 @@ $routePrefix = request()->is('bar-keeper*') ? 'bar-keeper' : 'admin';
             ];
             $icon = $categoryIcons[$categoryKey] ?? 'fa-folder-open-o';
             $displayName = ($categoryKey === 'soft_drinks') ? 'Soft Drinks & Sodas' : (ucfirst(str_replace('_', ' ', $categoryKey)));
+            if ($categoryKey === 'cleaning_supplies') $displayName = 'Housekeeping';
           @endphp
           
           <div class="category-section mb-5">

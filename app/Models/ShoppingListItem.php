@@ -26,6 +26,7 @@ class ShoppingListItem extends Model
         'is_received_by_department',
         'received_by_department_at',
         'expiry_date',
+        'received_quantity_kg',
     ];
 
     protected $casts = [
@@ -39,8 +40,9 @@ class ShoppingListItem extends Model
         'is_received_by_department' => 'boolean',
         'received_by_department_at' => 'datetime',
         'expiry_date' => 'date',
+        'received_quantity_kg' => 'decimal:2',
     ];
-    
+
     /**
      * Get the purchase request this item is linked to
      */
@@ -59,9 +61,14 @@ class ShoppingListItem extends Model
         return $this->belongsTo(Product::class);
     }
 
+    public function productVariant()
+    {
+        return $this->belongsTo(ProductVariant::class, 'product_variant_id');
+    }
+
     public function getCategoryNameAttribute()
     {
-        return match($this->category) {
+        return match ($this->category) {
             'meat_poultry' => 'Meat & Poultry',
             'seafood' => 'Seafood & Fish',
             'vegetables' => 'Vegetables & Fruits',
@@ -109,50 +116,70 @@ class ShoppingListItem extends Model
         }
 
         // --- MATCHING STRATEGY ---
-        
+
         // A. Match by Variant Name directly (Top Priority for Spirits/Drinks)
-        // Many records use "Konyagi" as Variant Name and "Vodka" as Product name
         $variant = ProductVariant::where('variant_name', $baseName)->first()
-                 ?? ProductVariant::where('variant_name', 'LIKE', $baseName . '%')->first()
-                 ?? ProductVariant::where('variant_name', 'LIKE', '%' . $baseName . '%')->first();
+            ?? ProductVariant::where('variant_name', 'LIKE', $baseName . '%')->first()
+            ?? ProductVariant::where('variant_name', 'LIKE', '%' . $baseName . '%')->first();
 
         // B. Match by Product Name
         if (!$variant) {
             $product = Product::where('name', $baseName)->first()
-                     ?? Product::where('name', 'LIKE', $baseName . '%')->first()
-                     ?? Product::where('name', 'LIKE', '%' . $baseName . '%')->first()
-                     // Reverse search: e.g. baseName is "Kilimanjaro Water Small", product name is "Kilimanjaro Water"
-                     ?? Product::whereRaw('? LIKE CONCAT("%", name, "%")', [$baseName])->first();
+                ?? Product::where('name', 'LIKE', $baseName . '%')->first()
+                ?? Product::where('name', 'LIKE', '%' . $baseName . '%')->first()
+                ?? Product::whereRaw('? LIKE CONCAT("%", name, "%")', [$baseName])->first();
 
             if ($product) {
-                // If we found a product, try to see if the baseName also contains a variant name
-                // e.g. "Kilimanjaro Water Small" -> check if any variant of product 6 is named "Small"
                 $remainingPart = trim(str_ireplace($product->name, '', $baseName));
                 $variantQuery = ProductVariant::where('product_id', $product->id);
-                
+
                 if ($remainingPart) {
                     $specificVariant = (clone $variantQuery)->where('variant_name', 'LIKE', '%' . $remainingPart . '%')->first();
-                    if ($specificVariant) $variant = $specificVariant;
+                    if ($specificVariant)
+                        $variant = $specificVariant;
                 }
-                
-                if (!$variant) $variant = $variantQuery->orderBy('id')->first();
+
+                if (!$variant)
+                    $variant = $variantQuery->orderBy('id')->first();
             }
         }
 
-        // C. Refine by Size if multiple variants exist
+        // C. Refine by Size
         if ($variant && $size) {
             $sizedVariant = ProductVariant::where('product_id', $variant->product_id)
-                ->where(function($q) use ($size) {
+                ->where(function ($q) use ($size) {
                     $q->where('measurement', 'LIKE', $size)
-                      ->orWhere('measurement', 'LIKE', '%' . $size . '%')
-                      ->orWhere('variant_name', 'LIKE', '%' . $size . '%');
+                        ->orWhere('measurement', 'LIKE', '%' . $size . '%')
+                        ->orWhere('variant_name', 'LIKE', '%' . $size . '%');
                 })->first();
-            
-            if ($sizedVariant) {
+
+            if ($sizedVariant)
                 return $sizedVariant;
-            }
         }
 
         return $variant;
+    }
+
+    /**
+     * Get purchasing info (package type and items per package)
+     */
+    public function getPurchasingInfoAttribute(): array
+    {
+        $variant = $this->product_variant;
+        if (!$variant) {
+            return [
+                'has_package' => false,
+                'purchasing_unit' => null,
+                'receiving_unit' => null,
+                'ratio' => 1
+            ];
+        }
+
+        return [
+            'has_package' => !empty($variant->purchasing_unit),
+            'purchasing_unit' => $variant->purchasing_unit,
+            'receiving_unit' => $variant->receiving_unit ?? 'kg',
+            'ratio' => $variant->items_per_package ?? 1
+        ];
     }
 }

@@ -28,15 +28,15 @@ class PurchaseRequestController extends Controller
         $staffDept = $staff->getDepartmentName();
         $deadline = PurchaseDeadline::where('is_active', true)->first();
         $nextDeadline = $deadline ? $deadline->getNextDeadlineDate() : null;
-        
+
         // Get active templates
         $allTemplates = PurchaseRequestTemplate::where('is_active', true)
             ->with('createdBy')
             ->get();
-            
+
         // Filter by user's department for non-managers
         if (!$staff->isManager() && !$staff->isSuperAdmin()) {
-            $templates = $allTemplates->filter(function($template) use ($staffDept) {
+            $templates = $allTemplates->filter(function ($template) use ($staffDept) {
                 return $template->createdBy && strcasecmp($template->createdBy->getDepartmentName(), $staffDept) === 0;
             })->sortBy('name');
         } else {
@@ -48,7 +48,7 @@ class PurchaseRequestController extends Controller
         if ($request->has('ids')) {
             $ids = is_array($request->ids) ? $request->ids : explode(',', $request->ids);
             $variants = \App\Models\ProductVariant::with('product')->whereIn('id', $ids)->get();
-            
+
             foreach ($variants as $variant) {
                 $preFilledItems[] = [
                     'item_name' => ($variant->product->name ?? '') . ($variant->measurement ? " ({$variant->measurement})" : ""),
@@ -64,7 +64,7 @@ class PurchaseRequestController extends Controller
         if ($request->has('kitchen_ids')) {
             $ids = is_array($request->kitchen_ids) ? $request->kitchen_ids : explode(',', $request->kitchen_ids);
             $items = \App\Models\KitchenInventoryItem::whereIn('id', $ids)->get();
-            
+
             foreach ($items as $item) {
                 $preFilledItems[] = [
                     'item_name' => $item->name,
@@ -80,7 +80,7 @@ class PurchaseRequestController extends Controller
         if ($request->has('housekeeping_ids')) {
             $ids = is_array($request->housekeeping_ids) ? $request->housekeeping_ids : explode(',', $request->housekeeping_ids);
             $items = \App\Models\HousekeepingInventoryItem::whereIn('id', $ids)->get();
-            
+
             foreach ($items as $item) {
                 $preFilledItems[] = [
                     'item_name' => $item->name,
@@ -91,7 +91,7 @@ class PurchaseRequestController extends Controller
                 ];
             }
         }
-        
+
         return view('dashboard.purchase-request-create', compact('deadline', 'nextDeadline', 'templates', 'preFilledItems'));
     }
 
@@ -113,30 +113,32 @@ class PurchaseRequestController extends Controller
                 'items.*.reason' => 'nullable|string|max:1000',
                 'items.*.priority' => 'required|in:low,medium,high,urgent',
             ]);
-            
+
             $staff = Auth::guard('staff')->user();
             $createdRequests = [];
-            
+
             foreach ($request->items as $item) {
                 // Build item name with water size if applicable
                 $itemName = trim($item['item_name']);
-                
+
                 // Remove any existing size suffix to avoid duplication (check anywhere in the name)
                 $itemName = preg_replace('/\s*\(Small\)\s*/i', '', $itemName);
                 $itemName = preg_replace('/\s*\(Large\)\s*/i', '', $itemName);
                 $itemName = trim($itemName); // Clean up any extra spaces
-                
+
                 // Only add size if it's water category and size is specified
-                if (isset($item['water_size']) && $item['water_size'] && 
-                    isset($item['category']) && $item['category'] === 'water' && 
-                    isset($item['unit']) && $item['unit'] === 'pcs') {
+                if (
+                    isset($item['water_size']) && $item['water_size'] &&
+                    isset($item['category']) && $item['category'] === 'water' &&
+                    isset($item['unit']) && $item['unit'] === 'pcs'
+                ) {
                     // Check if the size is not already in the name
                     $sizeText = ucfirst($item['water_size']);
                     if (stripos($itemName, $sizeText) === false) {
                         $itemName = $itemName . ' (' . $sizeText . ')';
                     }
                 }
-                
+
                 $purchaseRequest = PurchaseRequest::create([
                     'requested_by' => $staff->id,
                     'item_name' => $itemName,
@@ -155,7 +157,7 @@ class PurchaseRequestController extends Controller
                         $managersAndAdmins = \App\Models\Staff::whereIn('role', ['manager', 'super_admin'])
                             ->where('is_active', true)
                             ->get();
-                        
+
                         foreach ($managersAndAdmins as $manager) {
                             if ($manager->phone) {
                                 try {
@@ -174,12 +176,12 @@ class PurchaseRequestController extends Controller
 
                 $createdRequests[] = $purchaseRequest;
             }
-            
+
             $itemCount = count($createdRequests);
-            $message = $itemCount === 1 
-                ? 'Purchase request submitted successfully.' 
+            $message = $itemCount === 1
+                ? 'Purchase request submitted successfully.'
                 : "{$itemCount} purchase requests submitted successfully.";
-            
+
             return response()->json([
                 'success' => true,
                 'message' => $message,
@@ -196,9 +198,9 @@ class PurchaseRequestController extends Controller
                 'reason' => 'nullable|string|max:1000',
                 'priority' => 'required|in:low,medium,high,urgent',
             ]);
-            
+
             $staff = Auth::guard('staff')->user();
-            
+
             $purchaseRequest = PurchaseRequest::create([
                 'requested_by' => $staff->id,
                 'item_name' => $request->item_name,
@@ -216,7 +218,7 @@ class PurchaseRequestController extends Controller
                     $managersAndAdmins = \App\Models\Staff::whereIn('role', ['manager', 'super_admin'])
                         ->where('is_active', true)
                         ->get();
-                    
+
                     foreach ($managersAndAdmins as $manager) {
                         if ($manager->phone) {
                             try {
@@ -232,7 +234,7 @@ class PurchaseRequestController extends Controller
                     \Log::error('Failed to send purchase request SMS to managers: ' . $e->getMessage());
                 }
             }
-            
+
             return response()->json([
                 'success' => true,
                 'message' => 'Purchase request submitted successfully.',
@@ -247,10 +249,10 @@ class PurchaseRequestController extends Controller
     public function myRequests()
     {
         $staff = Auth::guard('staff')->user();
-        
+
         // Get staff's department name
         $staffDepartment = $staff->getDepartmentName();
-        
+
         // Get items ready to receive (transferred to this department but not received)
         // Items should be visible to all staff in the department, not just the original requester
         // Use case-insensitive matching to handle variations
@@ -262,13 +264,13 @@ class PurchaseRequestController extends Controller
             ->with(['purchaseRequest.requestedBy', 'shoppingList'])
             ->orderBy('updated_at', 'desc')
             ->get();
-        
+
         // Get purchase requests - newest first
         $requests = PurchaseRequest::with(['editor', 'shoppingList'])
             ->where('requested_by', $staff->id)
             ->orderBy('created_at', 'desc')
             ->paginate(5);
-        
+
         // Determine route prefix based on staff role
         $routePrefix = 'housekeeper'; // default
         $normalizedRole = strtolower(str_replace([' ', '_'], '', trim($staff->role ?? '')));
@@ -279,7 +281,7 @@ class PurchaseRequestController extends Controller
         } elseif (in_array($normalizedRole, ['headchef', 'head_chef', 'head chef', 'chef'])) {
             $routePrefix = 'chef-master';
         }
-        
+
         return view('dashboard.purchase-requests-my', compact('requests', 'itemsToReceive', 'routePrefix'));
     }
 
@@ -289,10 +291,10 @@ class PurchaseRequestController extends Controller
     public function history()
     {
         $staff = Auth::guard('staff')->user();
-        
+
         // Get staff's department name
         $staffDepartment = $staff->getDepartmentName();
-        
+
         // Get received items history (items that have been received by this department)
         $receivedItems = ShoppingListItem::whereRaw('LOWER(TRIM(transferred_to_department)) = ?', [strtolower(trim($staffDepartment))])
             ->where('is_received_by_department', true)
@@ -300,13 +302,13 @@ class PurchaseRequestController extends Controller
             ->with(['purchaseRequest.requestedBy', 'shoppingList'])
             ->orderBy('received_by_department_at', 'desc')
             ->paginate(5, ['*'], 'received_page');
-        
+
         // Get purchase requests - newest first
         $requests = PurchaseRequest::with(['editor', 'shoppingList'])
             ->where('requested_by', $staff->id)
             ->orderBy('created_at', 'desc')
             ->paginate(5, ['*'], 'requests_page');
-        
+
         // Determine route prefix based on staff role
         $routePrefix = 'housekeeper'; // default
         $normalizedRole = strtolower(str_replace([' ', '_'], '', trim($staff->role ?? '')));
@@ -317,10 +319,10 @@ class PurchaseRequestController extends Controller
         } elseif (in_array($normalizedRole, ['headchef', 'head_chef', 'head chef', 'chef'])) {
             $routePrefix = 'chef-master';
         }
-        
+
         return view('dashboard.purchase-requests-history', compact('requests', 'receivedItems', 'routePrefix'));
     }
-    
+
     /**
      * Receive transferred items (Department staff)
      */
@@ -331,38 +333,40 @@ class PurchaseRequestController extends Controller
             'item_ids' => 'required|array',
             'item_ids.*' => 'exists:shopping_list_items,id',
         ]);
-        
+
         DB::beginTransaction();
         try {
             $receivedCount = 0;
             $staffDeptName = $staff->getDepartmentName();
-            
+
             foreach ($request->item_ids as $itemId) {
                 $item = ShoppingListItem::findOrFail($itemId);
-                
+
                 // Verify this item has been transferred to the staff's department
                 // Any staff member in the department can receive items transferred to that department
                 $transferredDept = $item->transferred_to_department;
-                
-                if ($transferredDept &&
+
+                if (
+                    $transferredDept &&
                     strtolower(trim($transferredDept)) === strtolower(trim($staffDeptName)) &&
                     !$item->is_received_by_department &&
                     $item->is_purchased &&
                     $item->is_found &&
-                    ($item->purchased_quantity ?? 0) > 0) {
-                    
+                    ($item->purchased_quantity ?? 0) > 0
+                ) {
+
                     $item->update([
                         'is_received_by_department' => true,
                         'received_by_department_at' => now(),
                     ]);
-                    
+
                     // Update purchase request status if it exists
                     if ($item->purchaseRequest) {
                         $item->purchaseRequest->update([
                             'status' => 'completed',
                         ]);
                     }
-                    
+
                     // Add to inventory (only for housekeeping and food/kitchen department)
                     if (strtolower(trim($staffDeptName)) === 'housekeeping') {
                         $this->addToInventory($item, $staff);
@@ -371,17 +375,17 @@ class PurchaseRequestController extends Controller
                     } elseif (strtolower(trim($staffDeptName)) === 'bar') {
                         $this->addToBarInventory($item, $staff);
                     }
-                    
+
                     $receivedCount++;
                 }
             }
-            
+
             DB::commit();
-            
-            $inventoryMessage = (in_array(strtolower(trim($staffDeptName)), ['housekeeping', 'food', 'kitchen', 'bar'])) 
-                ? " and added to your inventory stock." 
+
+            $inventoryMessage = (in_array(strtolower(trim($staffDeptName)), ['housekeeping', 'food', 'kitchen', 'bar']))
+                ? " and added to your inventory stock."
                 : ".";
-            
+
             return response()->json([
                 'success' => true,
                 'message' => "{$receivedCount} item(s) received successfully{$inventoryMessage}",
@@ -394,7 +398,7 @@ class PurchaseRequestController extends Controller
             ], 500);
         }
     }
-    
+
     /**
      * Add received item to inventory
      */
@@ -402,16 +406,27 @@ class PurchaseRequestController extends Controller
     {
         $itemName = $shoppingListItem->product_name;
         $category = $shoppingListItem->category ?? 'other';
-        $quantity = $shoppingListItem->purchased_quantity ?? $shoppingListItem->quantity ?? 0;
-        $unit = $shoppingListItem->unit ?? 'pcs';
-        
+
+        // Priority: Manual KG measurement if exists
+        $useManualKg = $shoppingListItem->received_quantity_kg > 0;
+        $quantity = $useManualKg ? $shoppingListItem->received_quantity_kg : ($shoppingListItem->purchased_quantity ?? $shoppingListItem->quantity ?? 0);
+        $unit = $useManualKg ? 'kg' : ($shoppingListItem->unit ?? 'pcs');
+
         if ($quantity <= 0) {
             return; // Skip if no quantity
         }
-        
+
+        // Handle packaging for items if linked to a variant
+        $variant = $shoppingListItem->productVariant;
+        if ($variant && in_array(strtolower($unit), ['crates', 'crate', 'carton', 'packages', 'package'])) {
+            $itemsPerPackage = $variant->items_per_package ?? 1;
+            $quantity *= $itemsPerPackage;
+            $unit = $variant->measurement ?: 'pcs'; // Convert to base unit (e.g., pcs)
+        }
+
         // Find or create inventory item (Match by name to avoid duplicates if category varies slightly)
         $inventoryItem = HousekeepingInventoryItem::where('name', $itemName)->first();
-        
+
         if (!$inventoryItem) {
             $inventoryItem = HousekeepingInventoryItem::create([
                 'name' => $itemName,
@@ -421,11 +436,11 @@ class PurchaseRequestController extends Controller
                 'minimum_stock' => 0,
             ]);
         }
-        
+
         // Add received quantity to stock
         $inventoryItem->current_stock += $quantity;
         $inventoryItem->save();
-        
+
         // Create stock movement log
         InventoryStockMovement::create([
             'inventory_item_id' => $inventoryItem->id,
@@ -435,7 +450,7 @@ class PurchaseRequestController extends Controller
             'notes' => 'Received from purchase request: ' . ($shoppingListItem->purchaseRequest->item_name ?? $itemName),
         ]);
     }
-    
+
     /**
      * Add received item to kitchen inventory
      */
@@ -443,14 +458,26 @@ class PurchaseRequestController extends Controller
     {
         $itemName = $shoppingListItem->product_name;
         $category = $shoppingListItem->category ?? 'other';
-        $quantity = $shoppingListItem->purchased_quantity ?? $shoppingListItem->quantity ?? 0;
-        $unit = $shoppingListItem->unit ?? 'pcs';
+
+        // Priority: Manual KG measurement if exists
+        $useManualKg = $shoppingListItem->received_quantity_kg > 0;
+        $quantity = $useManualKg ? $shoppingListItem->received_quantity_kg : ($shoppingListItem->purchased_quantity ?? $shoppingListItem->quantity ?? 0);
+        $unit = $useManualKg ? 'kg' : ($shoppingListItem->unit ?? 'pcs');
+
         $expiryDate = $shoppingListItem->expiry_date;
-        
+
         if ($quantity <= 0) {
             return; // Skip if no quantity
         }
-        
+
+        // Handle packaging for kitchen items if linked to a variant
+        $variant = $shoppingListItem->productVariant;
+        if ($variant && in_array(strtolower($unit), ['crates', 'crate', 'carton', 'packages', 'package'])) {
+            $itemsPerPackage = $variant->items_per_package ?? 1;
+            $quantity *= $itemsPerPackage;
+            $unit = $variant->measurement ?: 'pcs'; // Convert to base unit
+        }
+
         // Find or create kitchen inventory item
         $inventoryItem = KitchenInventoryItem::firstOrCreate(
             [
@@ -463,14 +490,14 @@ class PurchaseRequestController extends Controller
                 'minimum_stock' => 0,
             ]
         );
-        
+
         // Add received quantity to stock and update expiry date if provided
         $inventoryItem->current_stock += $quantity;
         if ($expiryDate) {
             $inventoryItem->expiry_date = $expiryDate;
         }
         $inventoryItem->save();
-        
+
         // Create stock movement log
         KitchenStockMovement::create([
             'inventory_item_id' => $inventoryItem->id,
@@ -482,7 +509,7 @@ class PurchaseRequestController extends Controller
             'notes' => 'Received from purchase request: ' . ($shoppingListItem->purchaseRequest->item_name ?? $itemName),
         ]);
     }
-    
+
     /**
      * Add received item to bar inventory (as a completed stock transfer)
      */
@@ -493,10 +520,17 @@ class PurchaseRequestController extends Controller
             return; // Cannot add to bar inventory without product link
         }
 
-        $quantity = $shoppingListItem->purchased_quantity ?? $shoppingListItem->quantity ?? 0;
+        // Priority: Manual KG measurement if exists
+        $useManualKg = $shoppingListItem->received_quantity_kg > 0;
+        $quantity = $useManualKg ? $shoppingListItem->received_quantity_kg : ($shoppingListItem->purchased_quantity ?? $shoppingListItem->quantity ?? 0);
+
         if ($quantity <= 0) {
             return;
         }
+
+        // Determine unit
+        $isPackage = in_array(strtolower($shoppingListItem->unit), ['crates', 'crate', 'carton', 'packages', 'package']);
+        $unit = $useManualKg ? 'kg' : ($isPackage ? 'packages' : 'bottles');
 
         // Create a completed stock transfer to represent adding to bar stock
         $transfer = StockTransfer::create([
@@ -504,7 +538,7 @@ class PurchaseRequestController extends Controller
             'product_id' => $variant->product_id,
             'product_variant_id' => $variant->id,
             'quantity_transferred' => $quantity,
-            'quantity_unit' => 'bottles',
+            'quantity_unit' => $unit,
             'transferred_by' => 1, // System / Admin
             'received_by' => $staff->id,
             'status' => 'completed',
@@ -518,11 +552,11 @@ class PurchaseRequestController extends Controller
             'servings_per_pic' => $variant->servings_per_pic,
             'expiry_date' => $shoppingListItem->expiry_date,
         ]);
-        
+
         $transfer->calculateRevenueProjections();
         $transfer->save();
     }
-    
+
     /**
      * Show all received items (Manager view)
      */
@@ -530,12 +564,12 @@ class PurchaseRequestController extends Controller
     {
         $query = ShoppingListItem::where('is_received_by_department', true)
             ->with(['purchaseRequest.requestedBy', 'shoppingList']);
-        
+
         // Filter by department
         if ($request->has('department') && $request->department) {
-            $query->whereHas('purchaseRequest', function($q) use ($request) {
+            $query->whereHas('purchaseRequest', function ($q) use ($request) {
                 $deptName = $request->department;
-                $q->whereHas('requestedBy', function($subQ) use ($deptName) {
+                $q->whereHas('requestedBy', function ($subQ) use ($deptName) {
                     $normalizedRole = strtolower(str_replace([' ', '_'], '', trim($deptName)));
                     $roleMap = [
                         'housekeeping' => ['housekeeper'],
@@ -543,10 +577,10 @@ class PurchaseRequestController extends Controller
                         'bar' => ['bar_keeper', 'bar keeper', 'bartender'],
                         'food' => ['head_chef', 'head chef', 'chef'],
                     ];
-                    
+
                     if (isset($roleMap[$normalizedRole])) {
                         $roles = $roleMap[$normalizedRole];
-                        $subQ->where(function($roleQuery) use ($roles) {
+                        $subQ->where(function ($roleQuery) use ($roles) {
                             foreach ($roles as $role) {
                                 $roleQuery->orWhereRaw('LOWER(TRIM(role)) = ?', [strtolower($role)]);
                             }
@@ -555,7 +589,7 @@ class PurchaseRequestController extends Controller
                 });
             });
         }
-        
+
         // Filter by date range
         if ($request->has('date_from') && $request->date_from) {
             $query->where('received_by_department_at', '>=', $request->date_from);
@@ -563,30 +597,30 @@ class PurchaseRequestController extends Controller
         if ($request->has('date_to') && $request->date_to) {
             $query->where('received_by_department_at', '<=', $request->date_to . ' 23:59:59');
         }
-        
+
         $receivedItems = $query->orderBy('received_by_department_at', 'desc')
             ->paginate(50);
-        
+
         // Get department stats
         $departmentStats = ShoppingListItem::where('is_received_by_department', true)
             ->whereHas('purchaseRequest.requestedBy')
             ->with('purchaseRequest.requestedBy')
             ->get()
-            ->groupBy(function($item) {
+            ->groupBy(function ($item) {
                 if ($item->purchaseRequest && $item->purchaseRequest->requestedBy) {
                     return $item->purchaseRequest->requestedBy->getDepartmentName();
                 }
                 return 'Unknown';
             })
-            ->map(function($items) {
+            ->map(function ($items) {
                 return [
                     'count' => $items->count(),
-                    'total_quantity' => $items->sum(function($item) {
+                    'total_quantity' => $items->sum(function ($item) {
                         return $item->purchased_quantity ?? $item->quantity ?? 0;
                     }),
                 ];
             });
-        
+
         $activePage = 'purchase-requests/received';
         return view('dashboard.purchase-requests-received', compact('receivedItems', 'departmentStats', 'activePage'));
     }
@@ -598,21 +632,21 @@ class PurchaseRequestController extends Controller
     {
         $tab = $request->get('tab', 'new'); // default to new requests
         $query = PurchaseRequest::with(['requestedBy', 'approvedBy', 'shoppingList', 'editor']);
-        
+
         // Filter by status (from general filter dropdown)
         if ($request->has('status') && $request->status) {
             $query->where('status', $request->status);
         }
-        
+
         // Filter by priority
         if ($request->has('priority') && $request->priority) {
             $query->where('priority', $request->priority);
         }
-        
+
         // Filter by department
         if ($request->has('department') && $request->department) {
             $department = strtolower($request->department);
-            
+
             // Map department names to roles
             $departmentToRoles = [
                 'housekeeping' => ['housekeeper'],
@@ -620,11 +654,11 @@ class PurchaseRequestController extends Controller
                 'bar' => ['bar_keeper', 'bar keeper', 'bartender'],
                 'food' => ['head_chef', 'head chef', 'chef'],
             ];
-            
+
             if (isset($departmentToRoles[$department])) {
                 $roles = $departmentToRoles[$department];
-                $query->whereHas('requestedBy', function($q) use ($roles) {
-                    $q->where(function($subQuery) use ($roles) {
+                $query->whereHas('requestedBy', function ($q) use ($roles) {
+                    $q->where(function ($subQuery) use ($roles) {
                         foreach ($roles as $role) {
                             $subQuery->orWhereRaw('LOWER(TRIM(role)) = ?', [strtolower($role)]);
                         }
@@ -632,7 +666,7 @@ class PurchaseRequestController extends Controller
                 });
             }
         }
-        
+
         // Filter by Tab
         if ($tab === 'completed') {
             $query->whereIn('status', ['purchased', 'completed', 'received']);
@@ -642,24 +676,24 @@ class PurchaseRequestController extends Controller
             // New/Active requests (pending, approved, or on list but not yet fully purchased)
             $query->whereIn('status', ['pending', 'approved', 'on_list']);
         }
-        
+
         // Get all requests (not paginated for grouping)
         $allRequests = $query->orderBy('created_at', 'desc')->get();
-        
+
         // Group requests by department
-        $groupedRequests = $allRequests->groupBy(function($request) {
+        $groupedRequests = $allRequests->groupBy(function ($request) {
             if ($request->requestedBy) {
                 return $request->requestedBy->getDepartmentName();
             }
             return 'Other';
         });
-        
+
         // Also get paginated version for backward compatibility
         $requests = $query->orderBy('created_at', 'desc')->paginate(20)->appends($request->query());
-        
+
         $deadline = PurchaseDeadline::where('is_active', true)->first();
         $nextDeadline = $deadline ? $deadline->getNextDeadlineDate() : null;
-        
+
         // Statistics
         $stats = [
             'pending' => PurchaseRequest::where('status', 'pending')->count(),
@@ -668,26 +702,26 @@ class PurchaseRequestController extends Controller
             'purchased' => PurchaseRequest::whereIn('status', ['purchased', 'completed', 'received'])->count(),
             'total' => PurchaseRequest::count(),
         ];
-        
+
         $filters = $request->only(['status', 'priority', 'department']);
-        
+
         return view('dashboard.purchase-requests', compact('requests', 'groupedRequests', 'deadline', 'nextDeadline', 'stats', 'filters', 'tab'));
     }
-    
+
     /**
      * Update purchase request (Manager only)
      */
     public function update(Request $request, PurchaseRequest $purchaseRequest)
     {
         $manager = Auth::guard('staff')->user();
-        
+
         if ($manager->role !== 'manager' && !$manager->isSuperAdmin()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized. Only managers can edit requests.',
             ], 403);
         }
-        
+
         $request->validate([
             'item_name' => 'required|string|max:255',
             'quantity' => 'required|numeric|min:0.01',
@@ -695,7 +729,7 @@ class PurchaseRequestController extends Controller
             'priority' => 'required|in:low,medium,high,urgent',
             'reason' => 'nullable|string|max:1000',
         ]);
-        
+
         // Store old values for comparison
         $oldValues = $purchaseRequest->only([
             'item_name',
@@ -704,7 +738,7 @@ class PurchaseRequestController extends Controller
             'priority',
             'reason'
         ]);
-        
+
         // Build changes array
         $changes = [];
         $updateData = [
@@ -716,18 +750,18 @@ class PurchaseRequestController extends Controller
             'edited_by' => $manager->id,
             'last_edited_at' => now(),
         ];
-        
+
         // Compare and track changes
         foreach ($oldValues as $field => $oldValue) {
             $newValue = $updateData[$field] ?? null;
-            
+
             if ($field === 'quantity') {
                 // Quantity comparison (with 2 decimal precision)
-                if (round((float)$oldValue, 2) !== round((float)$newValue, 2)) {
+                if (round((float) $oldValue, 2) !== round((float) $newValue, 2)) {
                     $changes[] = [
                         'field' => ucfirst(str_replace('_', ' ', $field)),
-                        'old' => number_format((float)$oldValue, 0) . ' ' . $purchaseRequest->unit,
-                        'new' => number_format((float)$newValue, 0) . ' ' . $updateData['unit']
+                        'old' => number_format((float) $oldValue, 0) . ' ' . $purchaseRequest->unit,
+                        'new' => number_format((float) $newValue, 0) . ' ' . $updateData['unit']
                     ];
                 }
             } elseif ($field === 'priority') {
@@ -741,7 +775,7 @@ class PurchaseRequestController extends Controller
                 }
             } else {
                 // String comparison
-                if (trim((string)$oldValue) !== trim((string)$newValue)) {
+                if (trim((string) $oldValue) !== trim((string) $newValue)) {
                     $changes[] = [
                         'field' => ucfirst(str_replace('_', ' ', $field)),
                         'old' => $oldValue ?: '(empty)',
@@ -750,12 +784,12 @@ class PurchaseRequestController extends Controller
                 }
             }
         }
-        
+
         // Store changes
         $updateData['last_changes'] = !empty($changes) ? $changes : null;
-        
+
         $purchaseRequest->update($updateData);
-        
+
         return response()->json([
             'success' => true,
             'message' => 'Purchase request updated successfully.',
@@ -770,14 +804,14 @@ class PurchaseRequestController extends Controller
     public function show(PurchaseRequest $purchaseRequest)
     {
         $manager = Auth::guard('staff')->user();
-        
+
         if ($manager->role !== 'manager' && !$manager->isSuperAdmin()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized.',
             ], 403);
         }
-        
+
         return response()->json([
             'success' => true,
             'item_name' => $purchaseRequest->item_name,
@@ -796,14 +830,14 @@ class PurchaseRequestController extends Controller
     public function approve(Request $request, PurchaseRequest $purchaseRequest)
     {
         $manager = Auth::guard('staff')->user();
-        
+
         if ($manager->role !== 'manager' && !$manager->isSuperAdmin()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized. Only managers can approve requests.',
             ], 403);
         }
-        
+
         $purchaseRequest->update([
             'status' => 'approved',
             'approved_by' => $manager->id,
@@ -821,7 +855,7 @@ class PurchaseRequestController extends Controller
         } catch (\Exception $e) {
             \Log::error("Failed to send purchase approval SMS to requester: " . $e->getMessage());
         }
-        
+
         return response()->json([
             'success' => true,
             'message' => 'Purchase request approved successfully.',
@@ -834,26 +868,26 @@ class PurchaseRequestController extends Controller
     public function bulkApprove(Request $request)
     {
         $manager = Auth::guard('staff')->user();
-        
+
         if ($manager->role !== 'manager' && !$manager->isSuperAdmin()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized. Only managers can approve requests.',
             ], 403);
         }
-        
+
         $request->validate([
             'request_ids' => 'required|array',
             'request_ids.*' => 'exists:purchase_requests,id',
         ]);
-        
+
         $requestIds = $request->request_ids;
         $approvedCount = 0;
         $alreadyApprovedCount = 0;
-        
+
         foreach ($requestIds as $requestId) {
             $purchaseRequest = PurchaseRequest::find($requestId);
-            
+
             if ($purchaseRequest && $purchaseRequest->status === 'pending') {
                 $purchaseRequest->update([
                     'status' => 'approved',
@@ -865,7 +899,7 @@ class PurchaseRequestController extends Controller
                 $alreadyApprovedCount++;
             }
         }
-        
+
         $message = '';
         if ($approvedCount > 0) {
             $message = "{$approvedCount} purchase request(s) approved successfully.";
@@ -873,7 +907,7 @@ class PurchaseRequestController extends Controller
         if ($alreadyApprovedCount > 0) {
             $message .= ($message ? ' ' : '') . "{$alreadyApprovedCount} request(s) were already approved.";
         }
-        
+
         return response()->json([
             'success' => true,
             'message' => $message ?: 'No requests were approved.',
@@ -890,16 +924,16 @@ class PurchaseRequestController extends Controller
         $request->validate([
             'rejection_reason' => 'required|string|max:1000',
         ]);
-        
+
         $manager = Auth::guard('staff')->user();
-        
+
         if ($manager->role !== 'manager' && !$manager->isSuperAdmin()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized. Only managers can reject requests.',
             ], 403);
         }
-        
+
         $purchaseRequest->update([
             'status' => 'rejected',
             'rejection_reason' => $request->rejection_reason,
@@ -916,7 +950,7 @@ class PurchaseRequestController extends Controller
         } catch (\Exception $e) {
             \Log::error("Failed to send purchase rejection SMS to requester: " . $e->getMessage());
         }
-        
+
         return response()->json([
             'success' => true,
             'message' => 'Purchase request rejected.',
@@ -929,14 +963,14 @@ class PurchaseRequestController extends Controller
     public function showDeadline()
     {
         $manager = Auth::guard('staff')->user();
-        
+
         if ($manager->role !== 'manager' && !$manager->isSuperAdmin()) {
             return redirect()->route('admin.purchase-requests.index')
                 ->with('error', 'Unauthorized. Only managers can access deadline settings.');
         }
-        
+
         $deadline = PurchaseDeadline::where('is_active', true)->first();
-        
+
         // If no active deadline exists, create a default one
         if (!$deadline) {
             $deadline = PurchaseDeadline::create([
@@ -946,34 +980,34 @@ class PurchaseRequestController extends Controller
                 'is_active' => true,
             ]);
         }
-        
+
         $nextDeadline = $deadline->getNextDeadlineDate();
-        
+
         return view('dashboard.purchase-deadline-settings', compact('deadline', 'nextDeadline'));
     }
-    
+
     /**
      * Update purchase deadline (Manager only)
      */
     public function updateDeadline(Request $request)
     {
         $manager = Auth::guard('staff')->user();
-        
+
         if ($manager->role !== 'manager' && !$manager->isSuperAdmin()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized. Only managers can update deadline settings.',
             ], 403);
         }
-        
+
         $request->validate([
             'day_of_week' => 'required|in:monday,tuesday,wednesday,thursday,friday,saturday,sunday',
             'deadline_time' => 'required|date_format:H:i',
             'notes' => 'nullable|string|max:500',
         ]);
-        
+
         $deadline = PurchaseDeadline::where('is_active', true)->first();
-        
+
         if (!$deadline) {
             $deadline = PurchaseDeadline::create([
                 'day_of_week' => $request->day_of_week,
@@ -989,9 +1023,9 @@ class PurchaseRequestController extends Controller
                 'notes' => $request->notes,
             ]);
         }
-        
+
         $nextDeadline = $deadline->getNextDeadlineDate();
-        
+
         return response()->json([
             'success' => true,
             'message' => 'Purchase deadline updated successfully.',
@@ -1010,29 +1044,29 @@ class PurchaseRequestController extends Controller
             'request_ids' => 'required|array',
             'request_ids.*' => 'exists:purchase_requests,id',
         ]);
-        
+
         $manager = Auth::guard('staff')->user();
-        
+
         if ($manager->role !== 'manager' && !$manager->isSuperAdmin()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized. Only managers can add requests to shopping list.',
             ], 403);
         }
-        
+
         // Get approved purchase requests
         $purchaseRequests = PurchaseRequest::whereIn('id', $request->request_ids)
             ->where('status', 'approved')
             ->with('requestedBy')
             ->get();
-        
+
         if ($purchaseRequests->isEmpty()) {
             return response()->json([
                 'success' => false,
                 'message' => 'No approved requests selected.',
             ], 400);
         }
-        
+
         // Prepare items data for pre-filling
         $items = [];
         foreach ($purchaseRequests as $purchaseRequest) {
@@ -1045,7 +1079,7 @@ class PurchaseRequestController extends Controller
                 'purchase_request_id' => $purchaseRequest->id, // Store for later reference
             ];
         }
-        
+
         // Store purchase request IDs and items in session for pre-filling
         session([
             'purchase_requests_for_shopping_list' => $request->request_ids,
@@ -1053,7 +1087,7 @@ class PurchaseRequestController extends Controller
             'shopping_list_prefill_name' => 'Purchase List - ' . Carbon::now()->format('F d, Y'),
             'shopping_list_prefill_date' => Carbon::now()->next('friday')->format('Y-m-d'),
         ]);
-        
+
         return response()->json([
             'success' => true,
             'message' => 'Redirecting to shopping list creation...',
@@ -1067,14 +1101,14 @@ class PurchaseRequestController extends Controller
     public function templates()
     {
         $staff = Auth::guard('staff')->user();
-        
+
         $templates = PurchaseRequestTemplate::with('createdBy')
             ->where('created_by', $staff->id)
             ->orderBy('name')
             ->get();
-        
+
         $products = collect();
-        
+
         // Determine route prefix based on staff role
         $routePrefix = 'housekeeper'; // default
         $normalizedRole = strtolower(str_replace([' ', '_'], '', trim($staff->role ?? '')));
@@ -1091,7 +1125,7 @@ class PurchaseRequestController extends Controller
         } elseif (in_array($normalizedRole, ['headchef', 'head_chef', 'head chef', 'chef'])) {
             $routePrefix = 'chef-master';
         }
-        
+
         return view('dashboard.purchase-request-templates', compact('templates', 'routePrefix', 'products'));
     }
 
@@ -1112,29 +1146,31 @@ class PurchaseRequestController extends Controller
             'items.*.reason' => 'nullable|string|max:1000',
             'items.*.priority' => 'required|in:low,medium,high,urgent',
         ]);
-        
+
         $staff = Auth::guard('staff')->user();
-        
+
         // Process items similar to purchase request creation
         $processedItems = [];
         foreach ($request->items as $item) {
             $itemName = trim($item['item_name']);
-            
+
             // Remove any existing size suffix
             $itemName = preg_replace('/\s*\(Small\)\s*/i', '', $itemName);
             $itemName = preg_replace('/\s*\(Large\)\s*/i', '', $itemName);
             $itemName = trim($itemName);
-            
+
             // Add size if water category
-            if (isset($item['water_size']) && $item['water_size'] && 
-                isset($item['category']) && $item['category'] === 'water' && 
-                isset($item['unit']) && $item['unit'] === 'pcs') {
+            if (
+                isset($item['water_size']) && $item['water_size'] &&
+                isset($item['category']) && $item['category'] === 'water' &&
+                isset($item['unit']) && $item['unit'] === 'pcs'
+            ) {
                 $sizeText = ucfirst($item['water_size']);
                 if (stripos($itemName, $sizeText) === false) {
                     $itemName = $itemName . ' (' . $sizeText . ')';
                 }
             }
-            
+
             $processedItems[] = [
                 'item_name' => $itemName,
                 'category' => $item['category'] ?? null,
@@ -1145,7 +1181,7 @@ class PurchaseRequestController extends Controller
                 'priority' => $item['priority'],
             ];
         }
-        
+
         $template = PurchaseRequestTemplate::create([
             'name' => $request->name,
             'description' => $request->description,
@@ -1153,7 +1189,7 @@ class PurchaseRequestController extends Controller
             'created_by' => $staff->id,
             'is_active' => true,
         ]);
-        
+
         return response()->json([
             'success' => true,
             'message' => 'Template created successfully.',
@@ -1167,11 +1203,11 @@ class PurchaseRequestController extends Controller
     public function getTemplate($id)
     {
         $staff = Auth::guard('staff')->user();
-        
+
         $template = PurchaseRequestTemplate::where('id', $id)
             ->where('created_by', $staff->id)
             ->firstOrFail();
-        
+
         return response()->json([
             'success' => true,
             'template' => $template,
@@ -1184,11 +1220,11 @@ class PurchaseRequestController extends Controller
     public function updateTemplate(Request $request, $id)
     {
         $staff = Auth::guard('staff')->user();
-        
+
         $template = PurchaseRequestTemplate::where('id', $id)
             ->where('created_by', $staff->id)
             ->firstOrFail();
-        
+
         $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string|max:1000',
@@ -1201,25 +1237,27 @@ class PurchaseRequestController extends Controller
             'items.*.reason' => 'nullable|string|max:1000',
             'items.*.priority' => 'required|in:low,medium,high,urgent',
         ]);
-        
+
         // Process items similar to storeTemplate
         $processedItems = [];
         foreach ($request->items as $item) {
             $itemName = trim($item['item_name']);
-            
+
             $itemName = preg_replace('/\s*\(Small\)\s*/i', '', $itemName);
             $itemName = preg_replace('/\s*\(Large\)\s*/i', '', $itemName);
             $itemName = trim($itemName);
-            
-            if (isset($item['water_size']) && $item['water_size'] && 
-                isset($item['category']) && $item['category'] === 'water' && 
-                isset($item['unit']) && $item['unit'] === 'pcs') {
+
+            if (
+                isset($item['water_size']) && $item['water_size'] &&
+                isset($item['category']) && $item['category'] === 'water' &&
+                isset($item['unit']) && $item['unit'] === 'pcs'
+            ) {
                 $sizeText = ucfirst($item['water_size']);
                 if (stripos($itemName, $sizeText) === false) {
                     $itemName = $itemName . ' (' . $sizeText . ')';
                 }
             }
-            
+
             $processedItems[] = [
                 'item_name' => $itemName,
                 'category' => $item['category'] ?? null,
@@ -1230,13 +1268,13 @@ class PurchaseRequestController extends Controller
                 'priority' => $item['priority'],
             ];
         }
-        
+
         $template->update([
             'name' => $request->name,
             'description' => $request->description,
             'items' => $processedItems,
         ]);
-        
+
         return response()->json([
             'success' => true,
             'message' => 'Template updated successfully.',
@@ -1250,13 +1288,13 @@ class PurchaseRequestController extends Controller
     public function deleteTemplate($id)
     {
         $staff = Auth::guard('staff')->user();
-        
+
         $template = PurchaseRequestTemplate::where('id', $id)
             ->where('created_by', $staff->id)
             ->firstOrFail();
-        
+
         $template->delete();
-        
+
         return response()->json([
             'success' => true,
             'message' => 'Template deleted successfully.',

@@ -75,7 +75,7 @@ class Staff extends Authenticatable
         if (!$this->emailNotificationsEnabled()) {
             return false;
         }
-        
+
         $prefs = $this->notification_preferences ?? [];
         $key = $type . '_notifications';
         return $prefs[$key] ?? true; // Default to true
@@ -89,37 +89,37 @@ class Staff extends Authenticatable
         if (!$this->role) {
             return null;
         }
-        
+
         $staffRole = trim($this->role);
-        
+
         // Try exact match first
         $role = Role::where('name', $staffRole)->first();
         if ($role) {
             return $role;
         }
-        
+
         // Try case-insensitive match
         $role = Role::whereRaw('LOWER(TRIM(name)) = ?', [strtolower($staffRole)])->first();
         if ($role) {
             return $role;
         }
-        
+
         // Try matching with spaces/underscores normalized
         $normalizedStaffRole = str_replace([' ', '_'], '', strtolower($staffRole));
         $role = Role::whereRaw('REPLACE(LOWER(TRIM(name)), " ", "") = ? OR REPLACE(LOWER(TRIM(name)), "_", "") = ?', [$normalizedStaffRole, $normalizedStaffRole])->first();
         if ($role) {
             return $role;
         }
-        
+
         // Additional fallback: try matching display_name
         $role = Role::whereRaw('LOWER(TRIM(display_name)) = ?', [strtolower($staffRole)])->first();
         if ($role) {
             return $role;
         }
-        
+
         // Last resort: try partial match on display_name
         $role = Role::whereRaw('LOWER(display_name) LIKE ?', ['%' . strtolower($staffRole) . '%'])->first();
-        
+
         return $role;
     }
 
@@ -177,10 +177,10 @@ class Staff extends Authenticatable
         if ($this->department) {
             return ucfirst($this->department);
         }
-        
+
         // Otherwise, map role to department
         $normalizedRole = strtolower(trim($this->role ?? ''));
-        
+
         $roleToDepartment = [
             'housekeeper' => 'Housekeeping',
             'reception' => 'Reception',
@@ -193,20 +193,22 @@ class Staff extends Authenticatable
             'manager' => 'Management',
             'super_admin' => 'Management',
             'super admin' => 'Management',
+            'storekeeper' => 'Store',
+            'accountant' => 'Finance',
         ];
-        
+
         // Check exact match first
         if (isset($roleToDepartment[$normalizedRole])) {
             return $roleToDepartment[$normalizedRole];
         }
-        
+
         // Check partial matches
         foreach ($roleToDepartment as $role => $dept) {
             if (strpos($normalizedRole, $role) !== false || strpos($role, $normalizedRole) !== false) {
                 return $dept;
             }
         }
-        
+
         // Default fallback
         return ucfirst($this->role ?? 'Staff');
     }
@@ -219,7 +221,7 @@ class Staff extends Authenticatable
         if (!$permissionName) {
             return false;
         }
-        
+
         // Super admin always has all permissions (bypass role permission check)
         if ($this->isSuperAdmin()) {
             return true;
@@ -234,14 +236,14 @@ class Staff extends Authenticatable
             }
             return false;
         }
-        
+
         $hasPermission = $role->hasPermission($permissionName);
-        
+
         // Log for debugging
         if (config('app.debug')) {
             \Log::debug("Staff permission check: Staff ID {$this->id} ({$this->name}), Role: '{$this->role}' (Role ID: {$role->id}), Permission: '{$permissionName}', Result: " . ($hasPermission ? 'YES' : 'NO'));
         }
-        
+
         return $hasPermission;
     }
 

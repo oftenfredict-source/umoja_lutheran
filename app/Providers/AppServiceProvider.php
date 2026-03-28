@@ -19,11 +19,11 @@ class AppServiceProvider extends ServiceProvider
     public function boot()
     {
         Paginator::useBootstrapFour();
-        
+
         // Only force HTTPS if APP_URL uses HTTPS and we're in production
         // This prevents CSRF token mismatch when site is accessed via HTTP
         $appUrl = config('app.url');
-        
+
         // Log the configuration for debugging (only in production with debug enabled)
         if (app()->environment('production') && config('app.debug')) {
             \Log::info('AppServiceProvider URL Scheme Configuration', [
@@ -34,7 +34,7 @@ class AppServiceProvider extends ServiceProvider
                 'session_domain' => config('session.domain'),
             ]);
         }
-        
+
         if ($appUrl && str_starts_with($appUrl, 'https://')) {
             URL::forceScheme('https');
         }
@@ -77,9 +77,9 @@ class AppServiceProvider extends ServiceProvider
                     ->count();
 
                 // Pending service requests
-                $badges['service_requests'] = ServiceRequest::whereHas('booking', function($query) use ($user) {
-                        $query->where('guest_email', $user->email);
-                    })
+                $badges['service_requests'] = ServiceRequest::whereHas('booking', function ($query) use ($user) {
+                    $query->where('guest_email', $user->email);
+                })
                     ->where('status', 'pending')
                     ->count();
             }
@@ -95,10 +95,15 @@ class AppServiceProvider extends ServiceProvider
                 'service_requests' => 0,
                 'issues' => 0,
                 'room_issues' => 0,
+                'pending_stock_requests' => 0,
             ];
 
             $user = Auth::guard('staff')->user();
             if ($user && ($user->role === 'manager' || $user->role === 'super_admin')) {
+
+                // Pending stock requests
+                $badges['pending_stock_requests'] = \App\Models\StockRequest::where('status', 'pending_manager')
+                    ->count();
 
                 // Unread notifications count
                 $badges['notifications'] = Notification::forUser($user)
@@ -172,19 +177,19 @@ class AppServiceProvider extends ServiceProvider
         // Share notifications to dashboard layout
         View::composer('dashboard.layouts.app', function ($view) {
             $user = Auth::guard('staff')->user() ?? Auth::guard('guest')->user();
-            
+
             if ($user) {
                 // Get recent notifications (last 10)
                 $notifications = Notification::forUser($user)
                     ->orderBy('created_at', 'desc')
                     ->limit(10)
                     ->get();
-                
+
                 // Get unread count
                 $unreadNotificationCount = Notification::forUser($user)
                     ->unread()
                     ->count();
-                
+
                 // Debug logging (remove in production)
                 if (config('app.debug')) {
                     \Log::debug('Notification query for user', [
@@ -195,13 +200,13 @@ class AppServiceProvider extends ServiceProvider
                         'notification_ids' => $notifications->pluck('id')->toArray()
                     ]);
                 }
-                
+
                 // Determine user role for header dropdown
                 $userRole = null;
                 if ($user instanceof \App\Models\Staff) {
                     $rawRole = $user->role ?? '';
                     $normalizedRole = strtolower(str_replace([' ', '_'], '', trim($rawRole)));
-                    
+
                     if ($normalizedRole === 'superadmin' || strtolower($rawRole) === 'super_admin' || strtolower($rawRole) === 'super admin') {
                         $userRole = 'super_admin';
                     } elseif ($normalizedRole === 'manager' || strtolower($rawRole) === 'manager') {
@@ -218,11 +223,17 @@ class AppServiceProvider extends ServiceProvider
                 } elseif ($user instanceof \App\Models\Guest) {
                     $userRole = 'customer';
                 }
-                
+
+                // Get active store announcements
+                $activeStoreAnnouncements = \App\Models\StoreAnnouncement::with('creator')
+                    ->active()
+                    ->forRole($userRole)
+                    ->get();
+
                 // Get low stock housekeeping items count
                 $lowStockHousekeepingCount = 0;
                 $lowStockHousekeepingItems = collect([]);
-                
+
                 if (in_array($userRole, ['housekeeper', 'manager', 'super_admin'])) {
                     $lowStockHousekeepingItems = HousekeepingInventoryItem::whereRaw('current_stock <= minimum_stock')->get();
                     $lowStockHousekeepingCount = $lowStockHousekeepingItems->count();
@@ -235,6 +246,7 @@ class AppServiceProvider extends ServiceProvider
                     'userName' => $user->name ?? 'User',
                     'lowStockHousekeepingCount' => $lowStockHousekeepingCount,
                     'lowStockHousekeepingItems' => $lowStockHousekeepingItems,
+                    'activeStoreAnnouncements' => $activeStoreAnnouncements,
                 ]);
             } else {
                 $view->with([
@@ -282,7 +294,7 @@ class AppServiceProvider extends ServiceProvider
 
 
 
-        
+
 
     }
 }

@@ -296,7 +296,23 @@
                                 <div class="checkbox-box {{ $isFound ? 'checkbox-checked' : 'checkbox-missed' }}"></div>
                             </td>
                             <td>
-                                <strong>{{ $item->product_name }}</strong>
+                                @php
+                                    $displayName = $item->product_name;
+                                    $productItem = $item->product;
+                                    $variantItem = $item->product_variant ?? ($item->productVariant ?? null);
+                                    
+                                    // Append variant if not in name
+                                    if ($variantItem) {
+                                        $vName = $variantItem->variant_name;
+                                        if ($vName && strtolower($vName) !== 'standard' && strtolower($vName) !== 'unit' && !str_contains(strtolower($displayName), strtolower($vName))) {
+                                            $displayName .= ' - ' . $vName;
+                                        }
+                                    }
+                                @endphp
+                                <strong>{{ $displayName }}</strong>
+                                @if($productItem && strtolower($productItem->name) !== strtolower($item->product_name))
+                                    <div style="font-size: 8px; color: #28a745; font-weight: bold;">Ingredient: {{ $productItem->name }}</div>
+                                @endif
                             </td>
                             <td style="text-align: center;">
                                 @if(!$isFound)
@@ -310,7 +326,14 @@
                                 @endif
                             </td>
                             <td style="text-align: center;">{{ number_format($planQty, 0) }}</td>
-                            <td style="text-align: center;">{{ number_format($purchasedQty, 0) }}</td>
+                            <td style="text-align: center;">
+                                {{ number_format($purchasedQty, 0) }}
+                                @if($item->received_quantity_kg > 0)
+                                    <div style="font-size: 8px; color: #940000; margin-top: 2px;">
+                                        <strong>{{ number_format($item->received_quantity_kg, 2) }} KG</strong>
+                                    </div>
+                                @endif
+                            </td>
                             <td style="text-align: center;">
                                 @if($qtyDiff > 0)
                                     <span style="color: #28a745; font-weight: bold;">+{{ number_format($qtyDiff, 0) }}</span>

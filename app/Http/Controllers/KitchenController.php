@@ -6,6 +6,7 @@ use App\Models\ShoppingList;
 use App\Models\ShoppingListItem;
 use App\Models\Product;
 use App\Models\StockReceipt;
+use App\Models\ProductVariant;
 use App\Models\PurchaseRequest;
 use App\Models\Staff;
 use App\Models\Notification;
@@ -29,41 +30,66 @@ class KitchenController extends Controller
     {
         $query = ShoppingList::withCount('items')
             ->with('items'); // Eager load items for accessor calculation
-        
-        // Filter by status if provided
+
+        // Filter by role-specific allowed statuses
+        if (in_array(Auth::guard('staff')->user()->role, ['manager', 'super_admin', 'head_chef'])) {
+            $query->whereIn('status', ['pending', 'accountant_checked', 'approved', 'ready_for_purchase', 'purchased', 'completed']);
+        } elseif (Auth::guard('staff')->user()->role == 'storekeeper') {
+            $query->whereIn('status', ['pending', 'accountant_checked', 'approved', 'ready_for_purchase', 'purchased', 'completed']);
+        }
+
+        // Manual status filter from request
         if ($request->has('status') && $request->status) {
             $query->where('status', $request->status);
         }
-        
+
         $shoppingLists = $query->orderBy('created_at', 'desc')
             ->paginate(10)
             ->appends($request->query());
-        
+
         // Add hasPurchasedItems flag to each list
         foreach ($shoppingLists as $list) {
             $list->hasPurchasedItems = $list->items->where('is_purchased', true)->where('is_found', true)->isNotEmpty();
         }
-        
+
         return view('admin.restaurants.shopping_list.index', compact('shoppingLists'));
     }
 
     public function create()
     {
-        // Get existing food products to suggest
-        $products = Product::where('category', 'food')
-                           ->orWhere('type', 'kitchen')
-                           ->orderBy('name')
-                           ->get();
-        
+        // Get relevant products to suggest (Beverages, Food, Snacks, etc.)
+        $products = Product::whereIn('type', ['drink', 'food', 'kitchen'])
+            ->orWhereIn('category', [
+                'beverages',
+                'non_alcoholic_beverage',
+                'alcoholic_beverage',
+                'spirits',
+                'wines',
+                'water',
+                'juices',
+                'food',
+                'meat_poultry',
+                'seafood',
+                'vegetables',
+                'dairy',
+                'pantry_baking',
+                'spices_herbs',
+                'oils_fats',
+                'snacks'
+            ])
+            ->with('variants')
+            ->orderBy('name')
+            ->get();
+
         // Check if we have pre-filled data from purchase requests
         $prefillItems = session('shopping_list_prefill_items', []);
         $prefillName = session('shopping_list_prefill_name', '');
         $prefillDate = session('shopping_list_prefill_date', date('Y-m-d'));
         $purchaseRequestIds = session('purchase_requests_for_shopping_list', []);
-        
+
         // Clear session data after retrieving
         session()->forget(['shopping_list_prefill_items', 'shopping_list_prefill_name', 'shopping_list_prefill_date', 'purchase_requests_for_shopping_list']);
-        
+
         return view('admin.restaurants.shopping_list.create', compact('products', 'prefillItems', 'prefillName', 'prefillDate', 'purchaseRequestIds'));
     }
 
@@ -83,9 +109,9 @@ class KitchenController extends Controller
             // Calculate total estimated cost
             $totalEstimatedCost = 0;
             foreach ($request->items as $itemData) {
-                $totalEstimatedCost += $itemData['estimated_price'] ?? 0;
+                $totalEstimatedCost += ($itemData['estimated_price'] ?? 0) * ($itemData['quantity'] ?? 0);
             }
-            
+
             $list = ShoppingList::create([
                 'name' => $request->name,
                 'shopping_date' => $request->shopping_date,
@@ -99,22 +125,32 @@ class KitchenController extends Controller
             foreach ($request->items as $itemData) {
                 // Check if product exists
                 $product = Product::find($itemData['product_id'] ?? null);
-                
+
+                // Determine product_name with variant if available
+                $productName = $product ? $product->name : $itemData['product_name'];
+                if ($itemData['product_variant_id'] ?? null) {
+                    $variant = ProductVariant::find($itemData['product_variant_id']);
+                    if ($variant && !str_contains($productName, $variant->variant_name) && strtolower($variant->variant_name) !== 'standard' && strtolower($variant->variant_name) !== 'unit') {
+                        $productName .= ' - ' . $variant->variant_name;
+                    }
+                }
+
                 $shoppingListItem = ShoppingListItem::create([
                     'shopping_list_id' => $list->id,
                     'product_id' => $product ? $product->id : null,
-                    'product_name' => $product ? $product->name : $itemData['product_name'],
+                    'product_variant_id' => $itemData['product_variant_id'] ?? null,
+                    'product_name' => $productName,
                     'category' => $itemData['category'] ?? ($product ? $product->category_name : 'General'),
                     'quantity' => $itemData['quantity'],
                     'unit' => $itemData['unit'] ?? 'pcs',
                     'estimated_price' => $itemData['estimated_price'] ?? 0,
                     'purchase_request_id' => $itemData['purchase_request_id'] ?? null,
                 ]);
-                
+
                 // Store purchase request ID if provided and update purchase request
                 if (isset($itemData['purchase_request_id'])) {
                     $purchaseRequestIds[] = $itemData['purchase_request_id'];
-                    
+
                     // Update purchase request quantity and status
                     $purchaseRequest = PurchaseRequest::find($itemData['purchase_request_id']);
                     if ($purchaseRequest) {
@@ -124,7 +160,7 @@ class KitchenController extends Controller
                             'status' => 'on_list',
                             'quantity' => $itemData['quantity'], // Update quantity from shopping list
                         ]);
-                        
+
                         // Track changes if quantity was modified
                         if ($oldQuantity != $itemData['quantity']) {
                             $changes = $purchaseRequest->last_changes ?? [];
@@ -155,25 +191,49 @@ class KitchenController extends Controller
 
     public function show(ShoppingList $shoppingList)
     {
-        $shoppingList->load('items');
+        $shoppingList->load(['items.product', 'items.productVariant']);
         return view('admin.restaurants.shopping_list.show', compact('shoppingList'));
     }
 
     public function edit(ShoppingList $shoppingList)
     {
-        $shoppingList->load('items');
-        
-        // Get existing food products to suggest (reusing logic from create)
-        $products = Product::where('category', 'food')
-                           ->orWhere('type', 'kitchen')
-                           ->orderBy('name')
-                           ->get();
-                           
+        if ($shoppingList->status !== 'pending') {
+            return redirect()->route('admin.restaurants.shopping-list.index')->with('error', 'Only pending lists can be edited.');
+        }
+        $shoppingList->load(['items.product', 'items.productVariant']);
+
+        // Get relevant products to suggest (reusing logic from create)
+        $products = Product::whereIn('type', ['drink', 'food', 'kitchen'])
+            ->orWhereIn('category', [
+                'beverages',
+                'non_alcoholic_beverage',
+                'alcoholic_beverage',
+                'spirits',
+                'wines',
+                'water',
+                'juices',
+                'food',
+                'meat_poultry',
+                'seafood',
+                'vegetables',
+                'dairy',
+                'pantry_baking',
+                'spices_herbs',
+                'oils_fats',
+                'snacks'
+            ])
+            ->with('variants')
+            ->orderBy('name')
+            ->get();
+
         return view('admin.restaurants.shopping_list.edit', compact('shoppingList', 'products'));
     }
 
     public function update(Request $request, ShoppingList $shoppingList)
     {
+        if ($shoppingList->status !== 'pending') {
+            return redirect()->route('admin.restaurants.shopping-list.index')->with('error', 'Only pending lists can be edited.');
+        }
         $request->validate([
             'name' => 'required|string|max:255',
             'shopping_date' => 'nullable|date',
@@ -188,9 +248,9 @@ class KitchenController extends Controller
             // Calculate total estimated cost
             $totalEstimatedCost = 0;
             foreach ($request->items as $itemData) {
-                $totalEstimatedCost += $itemData['estimated_price'] ?? 0;
+                $totalEstimatedCost += ($itemData['estimated_price'] ?? 0) * ($itemData['quantity'] ?? 0);
             }
-            
+
             $shoppingList->update([
                 'name' => $request->name,
                 'shopping_date' => $request->shopping_date,
@@ -210,13 +270,23 @@ class KitchenController extends Controller
             foreach ($request->items as $itemData) {
                 // Determine if this is a new item (no ID) or existing
                 $itemId = $itemData['id'] ?? null;
-                
+
                 // Check if product exists for linking
                 $product = Product::find($itemData['product_id'] ?? null);
-                
+
+                // Determine product_name with variant if available
+                $productName = $product ? $product->name : ($itemData['product_name'] ?? 'Unknown Item');
+                if ($itemData['product_variant_id'] ?? null) {
+                    $variant = ProductVariant::find($itemData['product_variant_id']);
+                    if ($variant && !str_contains($productName, $variant->variant_name) && strtolower($variant->variant_name) !== 'standard' && strtolower($variant->variant_name) !== 'unit') {
+                        $productName .= ' - ' . $variant->variant_name;
+                    }
+                }
+
                 $data = [
                     'product_id' => $product ? $product->id : null,
-                    'product_name' => $product ? $product->name : ($itemData['product_name'] ?? 'Unknown Item'),
+                    'product_variant_id' => $itemData['product_variant_id'] ?? null,
+                    'product_name' => $productName,
                     'category' => $itemData['category'] ?? ($product ? $product->category_name : 'General'),
                     'quantity' => $itemData['quantity'] ?? 0,
                     'unit' => $itemData['unit'] ?? 'pcs',
@@ -230,7 +300,7 @@ class KitchenController extends Controller
                         $oldQuantity = $item->quantity;
                         $item->update($data);
                         $submittedIds[] = $itemId;
-                        
+
                         // Update purchase request quantity if linked and quantity changed
                         if ($item->purchase_request_id && $oldQuantity != $data['quantity']) {
                             $purchaseRequest = PurchaseRequest::find($item->purchase_request_id);
@@ -239,7 +309,7 @@ class KitchenController extends Controller
                                 $purchaseRequest->update([
                                     'quantity' => $data['quantity'],
                                 ]);
-                                
+
                                 // Track changes
                                 $changes = $purchaseRequest->last_changes ?? [];
                                 $changes[] = [
@@ -261,7 +331,7 @@ class KitchenController extends Controller
                     // Create new
                     $newItem = $shoppingList->items()->create($data);
                     $submittedIds[] = $newItem->id;
-                    
+
                     // Update purchase request if linked
                     if (isset($itemData['purchase_request_id'])) {
                         $purchaseRequest = PurchaseRequest::find($itemData['purchase_request_id']);
@@ -272,7 +342,7 @@ class KitchenController extends Controller
                                 'status' => 'on_list',
                                 'quantity' => $data['quantity'],
                             ]);
-                            
+
                             // Track changes if quantity was modified
                             if ($oldQuantity != $data['quantity']) {
                                 $changes = $purchaseRequest->last_changes ?? [];
@@ -307,6 +377,9 @@ class KitchenController extends Controller
 
     public function destroy(ShoppingList $shoppingList)
     {
+        if ($shoppingList->status !== 'pending') {
+            return redirect()->route('admin.restaurants.shopping-list.index')->with('error', 'Only pending lists can be deleted.');
+        }
         try {
             $shoppingList->delete();
             return redirect()->route('admin.restaurants.shopping-list.index')->with('success', 'Shopping list deleted successfully');
@@ -315,14 +388,31 @@ class KitchenController extends Controller
         }
     }
 
+    /**
+     * Manager Approval (Step 2)
+     */
+    public function managerApprove(Request $request, ShoppingList $shoppingList)
+    {
+        if ($shoppingList->status !== 'accountant_checked') {
+            return back()->with('error', 'This list must be checked by the accountant before manager approval.');
+        }
+
+        $shoppingList->update([
+            'status' => 'approved',
+            'notes' => $shoppingList->notes . ' | APPROVED by Manager: ' . now()->format('d/m/Y H:i')
+        ]);
+
+        return back()->with('success', 'Shopping list approved by manager. Storekeeper can now record purchases.');
+    }
+
     // === PURCHASE RECORDING ===
 
     public function recordPurchaseView(ShoppingList $shoppingList)
     {
-        if ($shoppingList->status === 'completed') {
-            return redirect()->back()->with('info', 'This list is already completed.');
+        if ($shoppingList->status !== 'ready_for_purchase') {
+            return redirect()->back()->with('info', 'This list is not yet ready for purchase (awaiting payment disbursement) or is already completed.');
         }
-        $shoppingList->load('items');
+        $shoppingList->load(['items.product', 'items.productVariant']);
         return view('admin.restaurants.shopping_list.record_purchase', compact('shoppingList'));
     }
 
@@ -343,19 +433,26 @@ class KitchenController extends Controller
             'items.*.selling_price_per_pic' => 'nullable|numeric|min:0',
             'items.*.selling_price_per_serving' => 'nullable|numeric|min:0',
             'items.*.price_adjustment_reason' => 'nullable|string',
+            'items.*.received_quantity_kg' => 'nullable|numeric|min:0',
         ]);
 
         DB::beginTransaction();
         try {
+            // Helper function to strip commas from currency strings
+            $cleanNumeric = function ($value) {
+                if (is_null($value))
+                    return "0";
+                return str_replace(',', '', (string) $value);
+            };
+
             $totalCost = 0;
-            
             foreach ($request->items as $itemId => $data) {
                 $item = ShoppingListItem::findOrFail($itemId);
-                $boughtQty = round((float)($data['purchased_quantity'] ?? 0));
-                $cost = round((float)($data['purchased_cost'] ?? 0));
+                $boughtQty = round($cleanNumeric($data['purchased_quantity'] ?? 0));
+                $cost = round($cleanNumeric($data['purchased_cost'] ?? 0));
                 $expiryDate = $data['expiry_date'] ?? null;
-                $unitPrice = isset($data['unit_price']) ? (float)$data['unit_price'] : null;
-                
+                $unitPrice = isset($data['unit_price']) ? $cleanNumeric($data['unit_price']) : null;
+
                 // CRITICAL FIX: Checkbox is only present if checked
                 $isFound = isset($data['is_found']) && $data['is_found'] == '1';
 
@@ -364,21 +461,34 @@ class KitchenController extends Controller
                     $cost = $unitPrice * $boughtQty;
                 }
 
+                $receivedKg = isset($data['received_quantity_kg']) ? (float) $cleanNumeric($data['received_quantity_kg']) : 0;
+
                 $updateData = [
                     'purchased_quantity' => $boughtQty,
                     'purchased_cost' => $cost,
                     'expiry_date' => $expiryDate,
                     'is_purchased' => $isFound && $boughtQty > 0,
-                    'is_found' => $isFound
+                    'is_found' => $isFound,
+                    'received_quantity_kg' => $receivedKg > 0 ? $receivedKg : null
                 ];
-                
-                // Calculate unit price if not explicitly provided
-                if ($unitPrice) {
-                    $updateData['unit_price'] = $unitPrice;
+
+                // Calculate unit price logic
+                $finalUnitPrice = $unitPrice;
+
+                // For food/kitchen items with measured KG, the true unit price is per KG
+                $foodCategories = ['food', 'meat_poultry', 'seafood', 'vegetables', 'dairy', 'pantry_baking', 'spices_herbs', 'oils_fats', 'kitchen', 'snacks'];
+                if (in_array($item->category, $foodCategories) && $receivedKg > 0 && $cost > 0) {
+                    $finalUnitPrice = $cost / $receivedKg;
+                } elseif ($unitPrice) {
+                    $finalUnitPrice = $unitPrice;
                 } elseif ($boughtQty > 0 && $cost > 0) {
-                    $updateData['unit_price'] = $cost / $boughtQty;
+                    $finalUnitPrice = $cost / $boughtQty;
                 }
-                
+
+                if ($finalUnitPrice !== null) {
+                    $updateData['unit_price'] = $finalUnitPrice;
+                }
+
                 $item->update($updateData);
 
                 // Update purchase request status if it exists
@@ -400,7 +510,7 @@ class KitchenController extends Controller
 
             // Update budget tracking
             // Use budget from request, or existing budget, or default to estimated cost
-            $budgetAmount = $request->budget_amount ?? $shoppingList->budget_amount ?? $shoppingList->total_estimated_cost ?? $shoppingList->items->sum('estimated_price');
+            $budgetAmount = $request->budget_amount ? $cleanNumeric($request->budget_amount) : ($shoppingList->budget_amount ?? $shoppingList->total_estimated_cost ?? $shoppingList->items->sum('estimated_price'));
             $amountUsed = $totalCost;
             $amountRemaining = $budgetAmount - $amountUsed;
 
@@ -408,18 +518,33 @@ class KitchenController extends Controller
             $shoppingList->budget_amount = $budgetAmount;
             $shoppingList->amount_used = $amountUsed;
             $shoppingList->amount_remaining = $amountRemaining;
-            
-            if ($request->has('finalize')) {
-                $shoppingList->status = 'completed';
-                // Here we should probably officially add to stock if not done above
+
+            // Save market name if provided
+            if ($request->has('market_name')) {
+                $shoppingList->market_name = $request->market_name;
             }
-            
+
+            if ($request->has('finalize')) {
+                // Change status to purchased (awaiting accountant verification) instead of completed
+                $shoppingList->status = 'purchased';
+            }
+
             $shoppingList->save();
 
             DB::commit();
 
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => $request->has('finalize') ? 'Purchases recorded and submitted for verification.' : 'Progress saved successfully.',
+                    'redirect_url' => route('admin.restaurants.shopping-list.index'),
+                    'report_url' => $request->has('finalize') ? route('admin.restaurants.shopping-list.receiving-report', ['shoppingList' => $shoppingList->id]) : null,
+                    'finalize' => $request->has('finalize')
+                ]);
+            }
+
             if ($request->has('finalize')) {
-                 return redirect()->route('admin.restaurants.shopping-list.receiving-report', ['shoppingList' => $shoppingList->id])->with('success', 'Purchases recorded. Print the receiving report, then transfer items to departments.');
+                return redirect()->route('admin.restaurants.shopping-list.receiving-report', ['shoppingList' => $shoppingList->id])->with('success', 'Purchases recorded. Print the receiving report, then transfer items to departments.');
             }
 
             return back()->with('success', 'Progress saved.');
@@ -429,7 +554,7 @@ class KitchenController extends Controller
             return back()->with('error', 'Error updating purchase: ' . $e->getMessage());
         }
     }
-    
+
     public function download(ShoppingList $shoppingList)
     {
         // Eager load items with their purchase requests and related staff
@@ -437,13 +562,13 @@ class KitchenController extends Controller
             'items.purchaseRequest.requestedBy',
             'items.purchaseRequest.approvedBy'
         ]);
-        
+
         // Get the manager who finalized the purchase (current user or from shopping list)
         $boughtBy = Auth::guard('staff')->user();
-        
+
         return view('admin.restaurants.shopping_list.download', compact('shoppingList', 'boughtBy'));
     }
-    
+
     /**
      * Download/Print receiving report
      */
@@ -452,26 +577,28 @@ class KitchenController extends Controller
         // Refresh the model to get latest data
         $shoppingList->refresh();
         $shoppingList->load('items');
-        
+
         return view('admin.restaurants.shopping_list.receiving_report', compact('shoppingList'));
     }
-    
+
     /**
      * Show all purchased items from the market (grouped by shopping list)
      */
     public function purchasedItems(Request $request)
     {
-        $query = ShoppingList::whereHas('items', function($q) {
-                $q->where('is_purchased', true)
-                  ->where('is_found', true)
-                  ->where('purchased_quantity', '>', 0);
-            })
-            ->with(['items' => function($q) {
-                $q->where('is_purchased', true)
-                  ->where('is_found', true)
-                  ->where('purchased_quantity', '>', 0);
-            }]);
-        
+        $query = ShoppingList::whereHas('items', function ($q) {
+            $q->where('is_purchased', true)
+                ->where('is_found', true)
+                ->where('purchased_quantity', '>', 0);
+        })
+            ->with([
+                'items' => function ($q) {
+                    $q->where('is_purchased', true)
+                        ->where('is_found', true)
+                        ->where('purchased_quantity', '>', 0);
+                }
+            ]);
+
         // Filter by date range
         if ($request->has('date_from') && $request->date_from) {
             $query->where('shopping_date', '>=', $request->date_from);
@@ -479,49 +606,49 @@ class KitchenController extends Controller
         if ($request->has('date_to') && $request->date_to) {
             $query->where('shopping_date', '<=', $request->date_to);
         }
-        
+
         // Filter by shopping list
         if ($request->has('shopping_list_id') && $request->shopping_list_id) {
             $query->where('id', $request->shopping_list_id);
         }
-        
+
         $shoppingLists = $query->orderBy('shopping_date', 'desc')
             ->orderBy('created_at', 'desc')
             ->paginate(20);
-        
+
         // Statistics
-        $totalLists = ShoppingList::whereHas('items', function($q) {
-                $q->where('is_purchased', true)
-                  ->where('is_found', true)
-                  ->where('purchased_quantity', '>', 0);
-            })
+        $totalLists = ShoppingList::whereHas('items', function ($q) {
+            $q->where('is_purchased', true)
+                ->where('is_found', true)
+                ->where('purchased_quantity', '>', 0);
+        })
             ->count();
-        
+
         $totalItems = ShoppingListItem::where('is_purchased', true)
             ->where('is_found', true)
             ->where('purchased_quantity', '>', 0)
             ->whereNotNull('shopping_list_id')
             ->count();
-        
+
         $totalCost = ShoppingListItem::where('is_purchased', true)
             ->where('is_found', true)
             ->whereNotNull('shopping_list_id')
             ->sum('purchased_cost');
-        
+
         // Get all shopping lists for filter dropdown
-        $allShoppingListsForFilter = ShoppingList::whereHas('items', function($q) {
-                $q->where('is_purchased', true)
-                  ->where('is_found', true)
-                  ->where('purchased_quantity', '>', 0);
-            })
+        $allShoppingListsForFilter = ShoppingList::whereHas('items', function ($q) {
+            $q->where('is_purchased', true)
+                ->where('is_found', true)
+                ->where('purchased_quantity', '>', 0);
+        })
             ->orderBy('created_at', 'desc')
             ->get();
-        
+
         $activePage = 'purchased-items';
-        
+
         return view('admin.restaurants.shopping_list.purchased_items', compact('shoppingLists', 'allShoppingListsForFilter', 'totalLists', 'totalItems', 'totalCost', 'activePage'));
     }
-    
+
     /**
      * Show all items ready for transfer grouped by department
      */
@@ -535,12 +662,12 @@ class KitchenController extends Controller
             ->where('is_received_by_department', false)
             ->with(['purchaseRequest.requestedBy', 'shoppingList'])
             ->get();
-        
+
         // Group items by department
         $itemsByDepartment = [];
         foreach ($items as $item) {
             $department = $item->transferred_to_department ?? 'Other';
-            
+
             if (!$item->transferred_to_department) {
                 if ($item->purchaseRequest) {
                     $department = $item->purchaseRequest->getDepartmentName();
@@ -558,7 +685,7 @@ class KitchenController extends Controller
                     }
                 }
             }
-            
+
             if (!isset($itemsByDepartment[$department])) {
                 $itemsByDepartment[$department] = [];
             }
@@ -569,72 +696,82 @@ class KitchenController extends Controller
             if ($variant && !$item->product_variant_id) {
                 $item->update(['product_variant_id' => $variant->id]);
             }
-            
+
             $itemsByDepartment[$department][] = $item;
         }
-        
+
         // Sort departments: Housekeeping, Reception, Bar, Food, Other
         $departmentOrder = ['Housekeeping', 'Reception', 'Bar', 'Food', 'Other'];
-        $itemsByDepartment = collect($itemsByDepartment)->sortBy(function($items, $dept) use ($departmentOrder) {
+        $itemsByDepartment = collect($itemsByDepartment)->sortBy(function ($items, $dept) use ($departmentOrder) {
             $pos = array_search($dept, $departmentOrder);
             return $pos === false ? 999 : $pos;
         })->toArray();
-        
+
         $activePage = 'transfers';
-        
+
         return view('admin.restaurants.shopping_list.transfers', compact('itemsByDepartment', 'activePage'));
     }
 
     // === KITCHEN STOCK VIEW ===
-    
+
     public function stock()
     {
         // 1. Existing Products
         $products = Product::where('category', 'food')
-                           ->orWhere('type', 'kitchen')
-                           ->orderBy('name')
-                           ->get();
+            ->orWhere('type', 'kitchen')
+            ->orderBy('name')
+            ->get();
 
         $stockData = [];
         foreach ($products as $product) {
             // 1. Total Received from Stock Receipts (Packages x Items)
             $receiptsReceived = DB::table('stock_receipts')
-                          ->join('product_variants', 'stock_receipts.product_variant_id', '=', 'product_variants.id')
-                          ->where('stock_receipts.product_id', $product->id)
-                          ->select(DB::raw('SUM(stock_receipts.quantity_received_packages * product_variants.items_per_package) as total_received'))
-                          ->first()->total_received ?? 0;
+                ->join('product_variants', 'stock_receipts.product_variant_id', '=', 'product_variants.id')
+                ->where('stock_receipts.product_id', $product->id)
+                ->select(DB::raw('SUM(stock_receipts.quantity_received_packages * product_variants.items_per_package) as total_received'))
+                ->first()->total_received ?? 0;
 
             // 2. Total Received from Shopping List Purchases
-            $shoppingListReceived = ShoppingListItem::where('product_id', $product->id)
-                                        ->where('is_purchased', true)
-                                        ->sum('purchased_quantity');
+            $shoppingListReceived = DB::table('shopping_list_items')
+                ->join('product_variants', 'shopping_list_items.product_variant_id', '=', 'product_variants.id')
+                ->where('shopping_list_items.product_id', $product->id)
+                ->where('shopping_list_items.is_purchased', true)
+                ->sum(DB::raw('CASE WHEN (unit = "crates" OR unit = "carton" OR unit = "packages" OR unit = "Sado" OR unit = "Debe" OR unit = "Kiroba" OR unit = "boxes") THEN purchased_quantity * product_variants.items_per_package ELSE purchased_quantity END'));
 
-            $totalReceived = (float)$receiptsReceived + (float)$shoppingListReceived;
+            $totalReceived = (float) $receiptsReceived + (float) $shoppingListReceived;
 
             // ONLY show if it has been received at least once (as requested)
             if ($totalReceived > 0) {
                 // Total Consumed (from Recipes)
                 $consumed = DB::table('recipe_consumptions')
-                              ->where('product_id', $product->id)
-                              ->sum('quantity_consumed');
+                    ->where('product_id', $product->id)
+                    ->sum('quantity_consumed');
 
                 // Try to get a unit from the first variant
                 $variant = $product->variants()->first();
                 $unit = '';
                 if ($variant) {
-                    // Extract unit part from measurement (e.g. "25kg" -> "kg") or use packaging
-                    $unit = $variant->measurement; 
-                    // If measurement is just a number, we might need more logic, 
-                    // but usually it contains the unit in this system.
+                    // 1. Use receiving_unit if available (Standardized)
+                    if (!empty($variant->receiving_unit)) {
+                        $unit = $variant->receiving_unit;
+                    }
+                    // 2. Fallback to extracting from measurement
+                    else {
+                        $unit = $variant->measurement;
+                        // Basic cleanup for "ml" in food items (likely misconfiguration)
+                        if (strtolower(trim($unit)) === 'ml' || str_ends_with(strtolower(trim($unit)), ' ml')) {
+                            $unit = 'Kg';
+                        }
+                    }
                 }
 
-                $stockData[] = (object)[
+                $stockData[] = (object) [
                     'id' => $product->id,
                     'name' => $product->name,
                     'category' => $product->category_name,
-                    'received' => (float)$totalReceived,
-                    'consumed' => (float)$consumed,
-                    'balance' => (float)($totalReceived - $consumed),
+                    'received' => (float) $totalReceived,
+                    'consumed' => (float) $consumed,
+                    'balance' => (float) ($totalReceived - $consumed),
                     'unit' => $unit,
                     'image' => $product->image
                 ];
@@ -643,19 +780,19 @@ class KitchenController extends Controller
 
         // 2. Unlinked Purchased Items
         $unlinkedItems = ShoppingListItem::whereNull('product_id')
-                            ->where('is_purchased', true)
-                            ->get()
-                            ->groupBy('product_name')
-                            ->map(function ($items) {
-                                return [
-                                    'name' => $items->first()->product_name,
-                                    'category' => $items->first()->category,
-                                    'total_qty' => $items->sum('purchased_quantity'),
-                                    'unit' => $items->first()->unit,
-                                    'storage' => $items->last()->storage_location,
-                                ];
-                            });
-                           
+            ->where('is_purchased', true)
+            ->get()
+            ->groupBy('product_name')
+            ->map(function ($items) {
+                return [
+                    'name' => $items->first()->product_name,
+                    'category' => $items->first()->category,
+                    'total_qty' => $items->sum('purchased_quantity'),
+                    'unit' => $items->first()->unit,
+                    'storage' => $items->last()->storage_location,
+                ];
+            });
+
         return view('admin.restaurants.kitchen.stock', compact('stockData', 'unlinkedItems'));
     }
 
@@ -681,47 +818,47 @@ class KitchenController extends Controller
 
         // Get Pending Food Orders (Service Requests)
         $foodCategories = ['food', 'restaurant'];
-        
+
         $pendingOrders = \App\Models\ServiceRequest::with(['booking.room', 'service'])
-            ->where(function($q) use ($foodCategories) {
+            ->where(function ($q) use ($foodCategories) {
                 // Filter by category OR explicit ID (Generic Food Order)
-                $q->whereHas('service', function($query) use ($foodCategories) {
+                $q->whereHas('service', function ($query) use ($foodCategories) {
                     $query->whereIn('category', $foodCategories);
                 })->orWhere('service_id', 4); // Generic Food Order Check
             })
-            ->where(function($q) {
+            ->where(function ($q) {
                 // 1. All active orders (pending, approved, or preparing)
                 $q->whereIn('status', ['pending', 'approved', 'preparing'])
-                // 2. OR Served orders that are WAITING FOR PAYMENT
-                ->orWhere(function($sub) {
+                    // 2. OR Served orders that are WAITING FOR PAYMENT
+                    ->orWhere(function ($sub) {
                     $sub->where('status', 'completed')
                         ->whereIn('payment_status', ['pending', 'unpaid']);
                 });
             })
             ->orderBy('requested_at', 'desc')
             ->get();
-        
+
         $totalPendingOrders = $pendingOrders->count();
 
         // Get active ceremonies (registered by reception today)
         $activeCeremonies = \App\Models\DayService::with(['serviceRequests.service'])
-            ->where(function($query) {
+            ->where(function ($query) {
                 $query->where('service_type', 'LIKE', '%ceremony%')
-                      ->orWhere('service_type', 'LIKE', '%ceremory%')
-                      ->orWhere('service_type', 'LIKE', '%birthday%');
+                    ->orWhere('service_type', 'LIKE', '%ceremory%')
+                    ->orWhere('service_type', 'LIKE', '%birthday%');
             })
             ->whereDate('service_date', now()->toDateString())
             ->get();
-        
+
         // Get available recipes for walk-in orders
         $recipes = \App\Models\Recipe::orderBy('name')
             ->get()
-            ->map(function($recipe) {
-                return (object)[
+            ->map(function ($recipe) {
+                return (object) [
                     'id' => $recipe->id,
                     'name' => $recipe->name,
                     'price_tsh' => $recipe->selling_price ?? 0,
-                    'image' => $recipe->image ? asset('storage/'.$recipe->image) : 'https://img.icons8.com/color/144/restaurant.png',
+                    'image' => $recipe->image ? asset('storage/' . $recipe->image) : 'https://img.icons8.com/color/144/restaurant.png',
                 ];
             });
 
@@ -730,9 +867,9 @@ class KitchenController extends Controller
         $role = $isChef ? 'head_chef' : 'manager';
 
         return view('admin.restaurants.kitchen.dashboard', compact(
-            'stats', 
-            'recentLists', 
-            'isChef', 
+            'stats',
+            'recentLists',
+            'isChef',
             'role',
             'pendingOrders',
             'totalPendingOrders',
@@ -740,7 +877,7 @@ class KitchenController extends Controller
             'recipes'
         ));
     }
-    
+
     /**
      * Show transfer items to departments page
      */
@@ -748,14 +885,14 @@ class KitchenController extends Controller
     {
         // Allow transfer if status is completed OR if items have been purchased (for flexibility)
         $hasPurchasedItems = $shoppingList->items()->where('is_purchased', true)->exists();
-        
+
         if ($shoppingList->status !== 'completed' && !$hasPurchasedItems) {
             return redirect()->route('admin.restaurants.shopping-list.index')
                 ->with('error', 'Please record purchases before transferring items.');
         }
-        
+
         $shoppingList->load(['items.purchaseRequest.requestedBy']);
-        
+
         // Group items by department - only show purchased items that haven't been transferred yet
         $itemsByDepartment = [];
         foreach ($shoppingList->items as $item) {
@@ -777,27 +914,30 @@ class KitchenController extends Controller
                     // Fallback to Bar/Food based on category if no purchase request (manual additions to list)
                     $category = strtolower($item->category ?? '');
                     $deptName = 'Other';
-                    if (in_array($category, ['beverages', 'alcoholic_beverage', 'spirits'])) $deptName = 'Bar';
-                    elseif (in_array($category, ['food', 'meat_poultry', 'dairy'])) $deptName = 'Food';
-                    
-                    if (!isset($itemsByDepartment[$deptName])) $itemsByDepartment[$deptName] = [];
+                    if (in_array($category, ['beverages', 'alcoholic_beverage', 'spirits']))
+                        $deptName = 'Bar';
+                    elseif (in_array($category, ['food', 'meat_poultry', 'dairy']))
+                        $deptName = 'Food';
+
+                    if (!isset($itemsByDepartment[$deptName]))
+                        $itemsByDepartment[$deptName] = [];
                     $itemsByDepartment[$deptName][] = $item;
                 }
             }
         }
-        
+
         // Sort departments: Housekeeping, Reception, Bar, Food, Other
         $departmentOrder = ['Housekeeping', 'Reception', 'Bar', 'Food', 'Other'];
-        $itemsByDepartment = collect($itemsByDepartment)->sortBy(function($items, $dept) use ($departmentOrder) {
+        $itemsByDepartment = collect($itemsByDepartment)->sortBy(function ($items, $dept) use ($departmentOrder) {
             $pos = array_search($dept, $departmentOrder);
             return $pos === false ? 999 : $pos;
         })->toArray();
-        
+
         $activePage = 'transfer';
-        
+
         return view('admin.restaurants.shopping_list.transfer', compact('shoppingList', 'itemsByDepartment', 'activePage'));
     }
-    
+
     /**
      * Process bulk transfer of all items to departments (from transfers index page)
      */
@@ -813,18 +953,18 @@ class KitchenController extends Controller
             'transfers.*.selling_price_per_pic' => 'nullable|numeric|min:0',
             'transfers.*.selling_price_per_serving' => 'nullable|numeric|min:0',
         ]);
-        
+
         DB::beginTransaction();
         try {
             $transferredCount = 0;
             $itemsByDepartment = [];
-            
+
             // Group items by department
             foreach ($request->transfers as $transferData) {
                 $item = ShoppingListItem::findOrFail($transferData['item_id']);
-                
+
                 $department = $transferData['department'];
-            
+
                 // Mark as transferred (but NOT received yet - department staff will confirm receipt)
                 $item->update([
                     'transferred_to_department' => $department,
@@ -840,9 +980,9 @@ class KitchenController extends Controller
                     if (!$item->product_variant_id) {
                         $item->update(['product_variant_id' => $variant->id]);
                     }
-                    
+
                     $method = $transferData['selling_method'];
-                    
+
                     $updateData = [
                         'servings_per_pic' => $transferData['servings_per_pic'] ?? 1,
                         'selling_unit' => $transferData['selling_unit'] ?? 'pic',
@@ -852,11 +992,11 @@ class KitchenController extends Controller
 
                     // ONLY update prices if they are provided (prevent null overwrite)
                     if (isset($transferData['selling_price_per_pic']) && $transferData['selling_price_per_pic'] !== '') {
-                        $updateData['selling_price_per_pic'] = (float)$transferData['selling_price_per_pic'];
+                        $updateData['selling_price_per_pic'] = (float) $transferData['selling_price_per_pic'];
                     }
-                    
+
                     if (isset($transferData['selling_price_per_serving']) && $transferData['selling_price_per_serving'] !== '') {
-                        $updateData['selling_price_per_serving'] = (float)$transferData['selling_price_per_serving'];
+                        $updateData['selling_price_per_serving'] = (float) $transferData['selling_price_per_serving'];
                     }
 
                     $variant->update($updateData);
@@ -868,34 +1008,34 @@ class KitchenController extends Controller
                         'updated_fields' => array_keys($updateData)
                     ]);
                 }
-                
+
                 // Group items by department for email/notification
                 if (!isset($itemsByDepartment[$department])) {
                     $itemsByDepartment[$department] = [];
                 }
                 $itemsByDepartment[$department][] = $item->fresh();
             }
-            
+
             DB::commit();
-            
+
             // Send emails and create notifications for each department
             $transferredBy = Auth::guard('staff')->user();
-            
+
             foreach ($itemsByDepartment as $department => $items) {
                 // Get staff members in this department
                 $departmentStaff = Staff::where('is_active', true)
                     ->get()
-                    ->filter(function($staff) use ($department) {
+                    ->filter(function ($staff) use ($department) {
                         return strcasecmp($staff->getDepartmentName(), $department) === 0;
                     });
-                
+
                 \Log::info('Transfer notifications - Department staff found', [
                     'department' => $department,
                     'staff_count' => $departmentStaff->count(),
                     'staff_ids' => $departmentStaff->pluck('id')->toArray(),
                     'staff_roles' => $departmentStaff->pluck('role')->toArray()
                 ]);
-                
+
                 // Send email to each staff member
                 foreach ($departmentStaff as $staff) {
                     if ($staff->isNotificationEnabled('purchase_request')) {
@@ -908,12 +1048,12 @@ class KitchenController extends Controller
                         }
                     }
                 }
-                
+
                 // Create notifications for each staff member
                 $itemCount = count($items);
                 $totalCost = collect($items)->sum('purchased_cost');
                 $firstItem = $items[0]; // Use first item for notifiable reference
-                
+
                 foreach ($departmentStaff as $staff) {
                     // Determine the correct route based on staff role
                     $routeName = 'housekeeper.purchase-requests.my'; // Default
@@ -926,7 +1066,7 @@ class KitchenController extends Controller
                         // Chef might use housekeeper route or have their own
                         $routeName = 'housekeeper.purchase-requests.my';
                     }
-                    
+
                     try {
                         $notification = Notification::create([
                             'type' => 'purchase_request',
@@ -959,24 +1099,24 @@ class KitchenController extends Controller
                     }
                 }
             }
-            
+
             // Log summary of notifications created
             $totalNotificationsCreated = 0;
             foreach ($itemsByDepartment as $department => $items) {
                 $departmentStaff = Staff::where('is_active', true)
                     ->get()
-                    ->filter(function($staff) use ($department) {
+                    ->filter(function ($staff) use ($department) {
                         return strcasecmp($staff->getDepartmentName(), $department) === 0;
                     });
                 $totalNotificationsCreated += $departmentStaff->count();
             }
-            
+
             \Log::info('Transfer completed - Summary', [
                 'items_transferred' => $transferredCount,
                 'departments_notified' => count($itemsByDepartment),
                 'total_notifications_created' => $totalNotificationsCreated
             ]);
-            
+
             return redirect()->route('admin.restaurants.shopping-list.index')
                 ->with('success', "Successfully transferred {$transferredCount} item(s) to departments. Notifications have been sent to department staff.");
         } catch (\Exception $e) {
@@ -984,7 +1124,7 @@ class KitchenController extends Controller
             return back()->with('error', 'Error transferring items: ' . $e->getMessage());
         }
     }
-    
+
     /**
      * Process transfer of items to departments (from specific shopping list)
      */
@@ -1000,19 +1140,19 @@ class KitchenController extends Controller
             'transfers.*.selling_price_per_pic' => 'nullable|numeric|min:0',
             'transfers.*.selling_price_per_serving' => 'nullable|numeric|min:0',
         ]);
-        
+
         DB::beginTransaction();
         try {
             foreach ($request->transfers as $transferData) {
                 $item = ShoppingListItem::findOrFail($transferData['item_id']);
-                
+
                 // Update item with transfer info
                 $item->update([
                     'transferred_to_department' => $transferData['department'],
                     'is_received_by_department' => false, // Ensure it's false until staff receives it
                     'received_by_department_at' => null,
                 ]);
-                
+
                 // Update product variant with PIC configuration if provided (usually for Bar)
                 $variant = $item->fresh()->productVariant;
                 if ($variant && isset($transferData['selling_method'])) {
@@ -1020,9 +1160,9 @@ class KitchenController extends Controller
                     if (!$item->product_variant_id) {
                         $item->update(['product_variant_id' => $variant->id]);
                     }
-                    
+
                     $method = $transferData['selling_method'];
-                    
+
                     $updateData = [
                         'servings_per_pic' => $transferData['servings_per_pic'] ?? 1,
                         'selling_unit' => $transferData['selling_unit'] ?? 'pic',
@@ -1032,17 +1172,17 @@ class KitchenController extends Controller
 
                     // ONLY update prices if they are provided (prevent null overwrite)
                     if (isset($transferData['selling_price_per_pic']) && $transferData['selling_price_per_pic'] !== '') {
-                        $updateData['selling_price_per_pic'] = (float)$transferData['selling_price_per_pic'];
+                        $updateData['selling_price_per_pic'] = (float) $transferData['selling_price_per_pic'];
                     }
-                    
+
                     if (isset($transferData['selling_price_per_serving']) && $transferData['selling_price_per_serving'] !== '') {
-                        $updateData['selling_price_per_serving'] = (float)$transferData['selling_price_per_serving'];
+                        $updateData['selling_price_per_serving'] = (float) $transferData['selling_price_per_serving'];
                     }
 
                     $variant->update($updateData);
                 }
             }
-            
+
             DB::commit();
             return redirect()->route('admin.restaurants.shopping-list.index')
                 ->with('success', 'Items transferred to departments. Departments can now receive them.');
@@ -1058,23 +1198,23 @@ class KitchenController extends Controller
     public function inventory(Request $request)
     {
         $barCategories = ['drinks', 'alcoholic_beverage', 'non_alcoholic_beverage', 'water', 'juices', 'energy_drinks', 'spirits', 'wines', 'cocktails', 'beer'];
-        
+
         $query = KitchenInventoryItem::whereNotIn('category', $barCategories);
-        
+
         if ($request->has('category') && $request->category) {
             $query->where('category', $request->category);
         }
-        
+
         if ($request->has('search') && $request->search) {
             $query->where('name', 'LIKE', '%' . $request->search . '%');
         }
-        
+
         $inventoryItems = $query->orderBy('name')->paginate(50);
         $categories = KitchenInventoryItem::whereNotIn('category', $barCategories)
             ->select('category')
             ->distinct()
             ->pluck('category');
-        
+
         $stats = [
             'total_items' => KitchenInventoryItem::whereNotIn('category', $barCategories)->count(),
             'low_stock' => KitchenInventoryItem::whereNotIn('category', $barCategories)
@@ -1084,7 +1224,7 @@ class KitchenController extends Controller
                 ->where('current_stock', '<=', 0)
                 ->count(),
         ];
-        
+
         return view('admin.restaurants.kitchen.inventory', compact('inventoryItems', 'categories', 'stats'));
     }
 
@@ -1098,10 +1238,10 @@ class KitchenController extends Controller
             'type' => 'required|in:supply,adjustment,guest_use,staff_use,destroyed',
             'notes' => 'nullable|string|max:255',
         ]);
-        
+
         $staff = Auth::guard('staff')->user();
-        $qtyChange = (float)$request->quantity;
-        
+        $qtyChange = (float) $request->quantity;
+
         DB::beginTransaction();
         try {
             if (in_array($request->type, ['guest_use', 'staff_use', 'destroyed'])) {
@@ -1116,9 +1256,9 @@ class KitchenController extends Controller
                 // Adjustment: can be positive or negative (manual fixes)
                 $item->current_stock += $qtyChange;
             }
-            
+
             $item->save();
-            
+
             KitchenStockMovement::create([
                 'inventory_item_id' => $item->id,
                 'movement_type' => $request->type,
@@ -1127,7 +1267,7 @@ class KitchenController extends Controller
                 'movement_date' => now(),
                 'notes' => $request->notes ?? ucfirst(str_replace('_', ' ', $request->type)) . ' update',
             ]);
-            
+
             DB::commit();
             return response()->json([
                 'success' => true,
@@ -1162,13 +1302,13 @@ class KitchenController extends Controller
             ->limit(30)
             ->get();
 
-        $runningBalance = (float)$item->current_stock;
+        $runningBalance = (float) $item->current_stock;
         $formattedMovements = [];
 
         foreach ($movements as $m) {
             $isAddition = in_array($m->movement_type, ['supply', 'manual_add']);
             $isSubtraction = in_array($m->movement_type, ['sale', 'guest_use', 'staff_use', 'internal_use', 'destroyed']);
-            
+
             // For adjustments, we might need a direction check if quantity can be negative
             // But usually the types above cover 99% of cases
             if ($m->movement_type === 'adjustment') {
@@ -1178,12 +1318,12 @@ class KitchenController extends Controller
             }
 
             $currentBalance = $runningBalance;
-            
+
             // Calculate what balance was BEFORE this movement for the NEXT iteration
             if ($isAddition) {
-                $runningBalance -= (float)$m->quantity;
+                $runningBalance -= (float) $m->quantity;
             } else {
-                $runningBalance += (float)$m->quantity;
+                $runningBalance += (float) $m->quantity;
             }
 
             $formattedMovements[] = [
@@ -1222,7 +1362,7 @@ class KitchenController extends Controller
         $staff = Auth::guard('staff')->user();
 
         if ($item->current_stock < $request->quantity) {
-             return response()->json(['success' => false, 'message' => 'Insufficient stock. Only ' . $item->current_stock . ' ' . $item->unit . ' available.'], 400);
+            return response()->json(['success' => false, 'message' => 'Insufficient stock. Only ' . $item->current_stock . ' ' . $item->unit . ' available.'], 400);
         }
 
         DB::beginTransaction();
@@ -1256,7 +1396,7 @@ class KitchenController extends Controller
     {
         $reportType = $request->get('date_type', 'daily');
         $date = $request->date ? Carbon::parse($request->date) : now();
-        
+
         if ($reportType === 'weekly') {
             $startDate = $date->copy()->startOfWeek();
             $endDate = $date->copy()->endOfWeek();
@@ -1267,28 +1407,39 @@ class KitchenController extends Controller
 
         // 1. Get ONLY Kitchen-related inventory items (Exclude ALL Bar/Drink categories)
         $barCategories = [
-            'spirits', 'alcoholic_beverage', 'liquor', 'wine', 'beer', 
-            'beers', 'soft_drinks', 'beverages', 'water', 'cocktails', 
-            'energy_drinks', 'non_alcoholic_beverage', 'juices', 'drinks'
+            'spirits',
+            'alcoholic_beverage',
+            'liquor',
+            'wine',
+            'beer',
+            'beers',
+            'soft_drinks',
+            'beverages',
+            'water',
+            'cocktails',
+            'energy_drinks',
+            'non_alcoholic_beverage',
+            'juices',
+            'drinks'
         ];
         $items = KitchenInventoryItem::whereNotIn('category', $barCategories)
             ->orderBy('category')
             ->orderBy('name')
             ->get();
-        
+
         $reportData = [];
         foreach ($items as $item) {
             // Opening Stock Calculation (Movements BEFORE the period)
             $movementsBefore = KitchenStockMovement::where('inventory_item_id', $item->id)
                 ->where('movement_date', '<', $startDate->toDateString())
                 ->get();
-            
+
             $openingStock = 0;
             foreach ($movementsBefore as $m) {
                 if (in_array($m->movement_type, ['supply', 'adjustment', 'manual_add'])) {
-                    $openingStock += (float)$m->quantity;
+                    $openingStock += (float) $m->quantity;
                 } else {
-                    $openingStock -= (float)$m->quantity;
+                    $openingStock -= (float) $m->quantity;
                 }
             }
 
@@ -1296,21 +1447,21 @@ class KitchenController extends Controller
             $movementsInPeriod = KitchenStockMovement::where('inventory_item_id', $item->id)
                 ->whereBetween('movement_date', [$startDate->toDateString(), $endDate->toDateString()])
                 ->get();
-            
+
             $received = $movementsInPeriod->whereIn('movement_type', ['supply', 'manual_add'])->sum('quantity');
-            
+
             // Adjustments in period: add all of them (assuming they are signed now)
             $adjustmentInPeriod = $movementsInPeriod->where('movement_type', 'adjustment')->sum('quantity');
-            
+
             $sold = $movementsInPeriod->whereIn('movement_type', ['sale', 'guest_use'])->sum('quantity');
             $inUse = $movementsInPeriod->whereIn('movement_type', ['internal_use', 'staff_use'])->sum('quantity');
             $lost = $movementsInPeriod->where('movement_type', 'destroyed')->sum('quantity');
             $soldAmount = $movementsInPeriod->whereIn('movement_type', ['sale', 'guest_use'])->sum('total_amount');
-            
+
             $productionStartingStock = $openingStock + $received + $adjustmentInPeriod;
             $closingStock = $productionStartingStock - $sold - $inUse - $lost;
 
-            $reportData[] = (object)[
+            $reportData[] = (object) [
                 'name' => $item->name,
                 'unit' => $item->unit,
                 'category' => $item->category,
@@ -1324,12 +1475,12 @@ class KitchenController extends Controller
         }
 
         // 3. Get Foods Cooked (Produced) - Detailed Log (Direct Sales Only)
-        $rawProduction = ServiceRequest::where(function($query) {
-                $query->whereIn('service_id', [4, 48]) // Generic Food (4) and Restaurant Food (48)
-                      ->orWhereHas('service', function($q) {
-                          $q->whereIn('category', ['food', 'restaurant']);
-                      });
-            })
+        $rawProduction = ServiceRequest::where(function ($query) {
+            $query->whereIn('service_id', [4, 48]) // Generic Food (4) and Restaurant Food (48)
+                ->orWhereHas('service', function ($q) {
+                    $q->whereIn('category', ['food', 'restaurant']);
+                });
+        })
             ->whereBetween('completed_at', [$startDate, $endDate])
             ->where('status', 'completed')
             ->whereNull('day_service_id')
@@ -1337,7 +1488,7 @@ class KitchenController extends Controller
             ->orderBy('completed_at', 'asc')
             ->get();
 
-        $productionData = $rawProduction->map(function($order) {
+        $productionData = $rawProduction->map(function ($order) {
             // Determine Destination
             $dest = 'N/A';
             $guestLabel = 'Room Guest';
@@ -1350,7 +1501,7 @@ class KitchenController extends Controller
                 $guestLabel = 'Room ' . ($order->booking->room->room_number ?? 'N/A');
             }
 
-            return (object)[
+            return (object) [
                 'item_name' => $order->service_specific_data['item_name'] ?? $order->service->name ?? 'Unknown Dish',
                 'destinations' => $dest,
                 'guest_label' => $guestLabel,
@@ -1370,11 +1521,11 @@ class KitchenController extends Controller
         $ceremonyUsage = ServiceRequest::with(['service', 'dayService'])
             ->whereNotNull('day_service_id')
             ->whereBetween('created_at', [$startDate, $endDate])
-            ->where(function($query) {
-                 $query->whereIn('service_id', [4, 48])
-                       ->orWhereHas('service', function($q) {
-                           $q->whereIn('category', ['food', 'restaurant']);
-                       });
+            ->where(function ($query) {
+                $query->whereIn('service_id', [4, 48])
+                    ->orWhereHas('service', function ($q) {
+                        $q->whereIn('category', ['food', 'restaurant']);
+                    });
             })
             ->orderBy('created_at', 'desc')
             ->get();
@@ -1384,12 +1535,12 @@ class KitchenController extends Controller
 
         $activePage = 'kitchen/reports';
         return view('admin.restaurants.kitchen.reports', compact(
-            'reportData', 
+            'reportData',
             'productionData',
             'ceremonyUsage',
-            'date', 
-            'startDate', 
-            'endDate', 
+            'date',
+            'startDate',
+            'endDate',
             'reportType',
             'activePage',
             'totalRev',

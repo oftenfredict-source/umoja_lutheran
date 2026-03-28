@@ -102,20 +102,41 @@
         </a>
     </div>
     <div class="col-md-6 col-lg-3">
-        <a href="{{ route('admin.purchase-requests.index') }}" style="text-decoration: none;">
+        <a href="{{ route('stock-requests.index', ['status' => 'pending_manager']) }}" style="text-decoration: none;">
             <div class="tile shadow-sm border-0 d-flex align-items-center bg-warning text-white p-3" style="border-radius: 12px; position: relative;">
-                @if(($stats['pending_purchase_requests'] ?? 0) > 0)
+                @php $pendingManagerCount = \App\Models\StockRequest::where('status', 'pending_manager')->count(); @endphp
+                @if($pendingManagerCount > 0)
                 <span class="badge badge-danger" style="position: absolute; top: -8px; right: -8px; font-size: 14px; padding: 6px 10px; border-radius: 50%; min-width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
-                    {{ $stats['pending_purchase_requests'] ?? 0 }}
+                    {{ $pendingManagerCount }}
                 </span>
                 @endif
                 <div class="mr-3 bg-white text-warning rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
-                    <i class="fa fa-shopping-cart fa-2x"></i>
+                    <i class="fa fa-paper-plane fa-2x"></i>
                 </div>
                 <div style="flex: 1;">
-                    <h5 class="mb-0">Purchase Requests</h5>
+                    <h5 class="mb-0">Internal Requests</h5>
                     <p class="mb-0 small opacity-75">
-                         @if(($stats['pending_purchase_requests'] ?? 0) > 0) <strong>{{ $stats['pending_purchase_requests'] }}</strong> @else No @endif pending
+                         @if($pendingManagerCount > 0) <strong>{{ $pendingManagerCount }}</strong> @else No @endif pending approval
+                    </p>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-6 col-lg-3">
+        <a href="{{ route('admin.restaurants.shopping-list.index', ['status' => 'accountant_checked']) }}" style="text-decoration: none;">
+            <div class="tile shadow-sm border-0 d-flex align-items-center bg-info text-white p-3" style="border-radius: 12px; position: relative; background-color: #17a2b8 !important;">
+                @if(($stats['pending_shopping_approvals'] ?? 0) > 0)
+                <span class="badge badge-danger" style="position: absolute; top: -8px; right: -8px; font-size: 14px; padding: 6px 10px; border-radius: 50%; min-width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                    {{ $stats['pending_shopping_approvals'] ?? 0 }}
+                </span>
+                @endif
+                <div class="mr-3 bg-white text-info rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                    <i class="fa fa-check-square-o fa-2x"></i>
+                </div>
+                <div style="flex: 1;">
+                    <h5 class="mb-0">Shopping Approvals</h5>
+                    <p class="mb-0 small opacity-75">
+                         @if(($stats['pending_shopping_approvals'] ?? 0) > 0) <strong>{{ $stats['pending_shopping_approvals'] }}</strong> @else No @endif awaiting your approval
                     </p>
                 </div>
             </div>
@@ -123,7 +144,7 @@
     </div>
     <div class="col-md-6 col-lg-3">
         <a href="{{ route('admin.extension-requests') }}" style="text-decoration: none;">
-            <div class="tile shadow-sm border-0 d-flex align-items-center bg-info text-white p-3" style="border-radius: 12px; position: relative;">
+            <div class="tile shadow-sm border-0 d-flex align-items-center bg-secondary text-white p-3" style="border-radius: 12px; position: relative;">
                 @if(($stats['pending_extensions'] ?? 0) > 0)
                 <span class="badge badge-danger" style="position: absolute; top: -8px; right: -8px; font-size: 14px; padding: 6px 10px; border-radius: 50%; min-width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
                     {{ $stats['pending_extensions'] ?? 0 }}
@@ -170,6 +191,15 @@
 </div>
 
 
+<!-- Toggle Button for Statistics -->
+<div class="row mb-3">
+  <div class="col-md-12 text-center">
+    <button class="btn btn-primary" type="button" data-toggle="collapse" data-target="#allStatistics" aria-expanded="false" aria-controls="allStatistics" id="toggleStatsBtn">
+      <i class="fa fa-bar-chart"></i> See All Statistics
+    </button>
+  </div>
+</div>
+
 <!-- All Statistics (Collapsible) -->
 <div class="collapse" id="allStatistics">
   <div class="row mb-3">
@@ -202,10 +232,10 @@
             </div>
             <div class="col-md-6 col-lg-3">
               <div class="widget-small warning coloured-icon">
-                <i class="icon fa fa-clock-o fa-2x"></i>
+                <i class="icon fa fa-car fa-2x"></i>
                 <div class="info">
-                  <h4>Pending Requests</h4>
-                  <p><b>{{ $stats['pending_requests'] ?? 0 }}</b></p>
+                  <h4>Day Services</h4>
+                  <p><b>{{ number_format($stats['today_day_service_revenue'] ?? 0, 0) }} TZS</b></p>
                 </div>
               </div>
             </div>
@@ -311,7 +341,74 @@
   </div>
 </div>
 
-<!-- Charts and Recent Bookings -->
+<!-- Pending Internal Requests Table -->
+@if(isset($pendingStockRequests) && $pendingStockRequests->count() > 0)
+<div class="row mt-3">
+    <div class="col-md-12">
+        <div class="tile border-warning" style="border-top: 3px solid #f39c12;">
+            <div class="tile-title-w-btn">
+                <h3 class="title text-warning"><i class="fa fa-paper-plane"></i> Requests Waiting Your Approval</h3>
+                <p><a class="btn btn-warning text-white icon-btn" href="{{ route('stock-requests.index', ['status' => 'pending_manager']) }}"><i class="fa fa-list"></i> View All</a></p>
+            </div>
+            <div class="tile-body">
+                <div class="table-responsive">
+                    <table class="table table-hover table-bordered">
+                        <thead class="bg-light">
+                            <tr>
+                                <th>Date</th>
+                                <th>Requested By</th>
+                                <th>Department</th>
+                                <th>Product</th>
+                                <th>Quantity</th>
+                                <th>Status</th>
+                                <th class="text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($pendingStockRequests as $request)
+                            <tr>
+                                <td>{{ $request->created_at->format('M d, Y H:i') }}</td>
+                                <td>
+                                    <strong>{{ $request->requester->name }}</strong>
+                                    <br><small class="text-muted">{{ $request->requester->role }}</small>
+                                </td>
+                                <td>
+                                    @php
+                                        $category = $request->productVariant->product->category->name ?? '';
+                                        $color = 'secondary';
+                                        if (str_contains(strtolower($category), 'drink') || str_contains(strtolower($category), 'beverage')) $color = 'primary';
+                                        elseif (str_contains(strtolower($category), 'food') || str_contains(strtolower($category), 'kitchen')) $color = 'success';
+                                        elseif (str_contains(strtolower($category), 'housekeep')) $color = 'info';
+                                    @endphp
+                                    <span class="badge badge-{{ $color }}">{{ $category }}</span>
+                                </td>
+                                <td>
+                                    <strong>{{ $request->productVariant->product->name }}</strong>
+                                    <br><small class="text-muted">{{ $request->productVariant->variant_name }}</small>
+                                </td>
+                                <td>
+                                    <span class="h5 mb-0">{{ number_format($request->quantity, 0) }}</span>
+                                    <small>{{ $request->unit }}</small>
+                                </td>
+                                <td>
+                                    <span class="badge badge-info">Waiting Manager</span>
+                                </td>
+                                <td class="text-center">
+                                    <a href="{{ route('stock-requests.index', ['status' => 'pending_manager']) }}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fa fa-check"></i> Review & Approve
+                                    </a>
+                                </td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@endif
+
 <div class="row">
   <div class="col-md-6">
     <div class="tile">

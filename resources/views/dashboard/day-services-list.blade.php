@@ -24,11 +24,14 @@
               <i class="fa fa-plus"></i> Register Service
             </button>
             <div class="dropdown-menu">
-              <a class="dropdown-item" href="{{ $role === 'reception' ? route('reception.day-services.swimming') : route('admin.day-services.swimming') }}">
-                <i class="fa fa-tint"></i> Swimming Service
+              <a class="dropdown-item" href="{{ $role === 'reception' ? route('reception.day-services.parking') : route('admin.day-services.parking') }}">
+                <i class="fa fa-car"></i> Parking Service
               </a>
-              <a class="dropdown-item" href="{{ $role === 'reception' ? route('reception.day-services.ceremony') : route('admin.day-services.ceremony') }}">
-                <i class="fa fa-birthday-cake"></i> Ceremony Service
+              <a class="dropdown-item" href="{{ $role === 'reception' ? route('reception.day-services.garden') : route('admin.day-services.garden') }}">
+                <i class="fa fa-leaf"></i> Garden Service
+              </a>
+              <a class="dropdown-item" href="{{ $role === 'reception' ? route('reception.day-services.conference') : route('admin.day-services.conference') }}">
+                <i class="fa fa-briefcase"></i> Conference Room
               </a>
             </div>
           </div>
@@ -49,24 +52,24 @@
             </a>
           </li>
           <li class="nav-item">
-            <a class="nav-link {{ request('tab') == 'swimming' ? 'active' : '' }}" 
-               href="{{ $role === 'reception' ? route('reception.day-services.index', array_merge(request()->except('tab'), ['tab' => 'swimming'])) : route('admin.day-services.index', array_merge(request()->except('tab'), ['tab' => 'swimming'])) }}"
-               style="color: #666; font-weight: 600; padding: 12px 24px; border: none; border-bottom: 3px solid transparent; {{ request('tab') == 'swimming' ? 'border-bottom-color: #940000; color: #940000;' : '' }}">
-              <i class="fa fa-tint"></i> Swimming
+            <a class="nav-link {{ request('tab') == 'parking' ? 'active' : '' }}" 
+               href="{{ $role === 'reception' ? route('reception.day-services.index', array_merge(request()->except('tab'), ['tab' => 'parking'])) : route('admin.day-services.index', array_merge(request()->except('tab'), ['tab' => 'parking'])) }}"
+               style="color: #666; font-weight: 600; padding: 12px 24px; border: none; border-bottom: 3px solid transparent; {{ request('tab') == 'parking' ? 'border-bottom-color: #940000; color: #940000;' : '' }}">
+              <i class="fa fa-car"></i> Parking
             </a>
           </li>
           <li class="nav-item">
-            <a class="nav-link {{ request('tab') == 'swimming_with_bucket' || request('tab') == 'swimming-with-bucket' ? 'active' : '' }}" 
-               href="{{ $role === 'reception' ? route('reception.day-services.index', array_merge(request()->except('tab'), ['tab' => 'swimming_with_bucket'])) : route('admin.day-services.index', array_merge(request()->except('tab'), ['tab' => 'swimming_with_bucket'])) }}"
-               style="color: #666; font-weight: 600; padding: 12px 24px; border: none; border-bottom: 3px solid transparent; {{ (request('tab') == 'swimming_with_bucket' || request('tab') == 'swimming-with-bucket') ? 'border-bottom-color: #940000; color: #940000;' : '' }}">
-              <i class="fa fa-tint"></i> Swimming with Floating Trey
+            <a class="nav-link {{ request('tab') == 'garden' ? 'active' : '' }}" 
+               href="{{ $role === 'reception' ? route('reception.day-services.index', array_merge(request()->except('tab'), ['tab' => 'garden'])) : route('admin.day-services.index', array_merge(request()->except('tab'), ['tab' => 'garden'])) }}"
+               style="color: #666; font-weight: 600; padding: 12px 24px; border: none; border-bottom: 3px solid transparent; {{ request('tab') == 'garden' ? 'border-bottom-color: #940000; color: #940000;' : '' }}">
+              <i class="fa fa-leaf"></i> Garden
             </a>
           </li>
           <li class="nav-item">
-            <a class="nav-link {{ request('tab') == 'ceremony' || request('tab') == 'ceremory' ? 'active' : '' }}" 
-               href="{{ $role === 'reception' ? route('reception.day-services.index', array_merge(request()->except('tab'), ['tab' => 'ceremony'])) : route('admin.day-services.index', array_merge(request()->except('tab'), ['tab' => 'ceremony'])) }}"
-               style="color: #666; font-weight: 600; padding: 12px 24px; border: none; border-bottom: 3px solid transparent; {{ (request('tab') == 'ceremony' || request('tab') == 'ceremory') ? 'border-bottom-color: #940000; color: #940000;' : '' }}">
-              <i class="fa fa-birthday-cake"></i> Ceremony
+            <a class="nav-link {{ request('tab') == 'conference_room' ? 'active' : '' }}" 
+               href="{{ $role === 'reception' ? route('reception.day-services.index', array_merge(request()->except('tab'), ['tab' => 'conference_room'])) : route('admin.day-services.index', array_merge(request()->except('tab'), ['tab' => 'conference_room'])) }}"
+               style="color: #666; font-weight: 600; padding: 12px 24px; border: none; border-bottom: 3px solid transparent; {{ request('tab') == 'conference_room' ? 'border-bottom-color: #940000; color: #940000;' : '' }}">
+              <i class="fa fa-briefcase"></i> Conference Room
             </a>
           </li>
         </ul>
@@ -187,7 +190,7 @@
               <th>Guest Name</th>
               <th>Phone</th>
               <th>Date & Time</th>
-              <th>People</th>
+              <th>{{ request('tab') === 'parking' ? 'Vehicles' : 'People' }}</th>
               <th>Amount</th>
               <th>Status</th>
               <th>Payment Status</th>
@@ -855,8 +858,12 @@ function viewService(serviceId) {
       const serviceKey = (service.service_type || '').toLowerCase();
       if (serviceKey.includes('ceremony') || serviceKey.includes('ceremory') || serviceKey.includes('birthday') || serviceKey.includes('package')) {
         serviceTypeName = 'Ceremony/Birthday Package';
-      } else if (serviceKey === 'swimming') {
-        serviceTypeName = 'Swimming/Pool Access';
+      } else if (serviceKey === 'parking') {
+        serviceTypeName = 'Parking Service';
+      } else if (serviceKey === 'garden') {
+        serviceTypeName = 'Garden Service';
+      } else if (serviceKey === 'conference_room') {
+        serviceTypeName = 'Conference Room';
       } else if (!service.service_type_name) {
         serviceTypeName = service.service_type ? service.service_type.charAt(0).toUpperCase() + service.service_type.slice(1) : 'Unknown';
       }

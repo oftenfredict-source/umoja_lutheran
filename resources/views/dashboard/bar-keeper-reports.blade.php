@@ -3,13 +3,13 @@
 @section('content')
 <div class="app-title d-print-none">
   <div>
-    <h1><i class="fa fa-glass"></i> Bar & Drinks Reports</h1>
-    <p>View bar operations, sales, and stock reports</p>
+    <h1><i class="fa fa-glass"></i> Counter & Drinks Reports</h1>
+    <p>View counter operations, sales, and stock reports</p>
   </div>
   <ul class="app-breadcrumb breadcrumb">
     <li class="breadcrumb-item"><i class="fa fa-home fa-lg"></i></li>
     <li class="breadcrumb-item"><a href="{{ route('bar-keeper.dashboard') }}">Dashboard</a></li>
-    <li class="breadcrumb-item">Bar Reports</li>
+    <li class="breadcrumb-item">Counter Reports</li>
   </ul>
 </div>
 
@@ -378,7 +378,7 @@
             <p><strong>Mobile/WhatsApp:</strong> 0677-155-156 / +255 677-155-157</p>
             <p><strong>Email:</strong> info@Umoja Lutheran Hostelhotel.co.tz / infoUmoja Lutheran Hostelhotel@gmail.com</p>
         </div>
-        <p style="margin-top: 15px; font-size: 18px; font-weight: bold; color: #940000;">Bar Operations Report</p>
+        <p style="margin-top: 15px; font-size: 18px; font-weight: bold; color: #940000;">Counter Operations Report</p>
     </div>
     
     <!-- Report Number -->
@@ -389,9 +389,9 @@
     <!-- Receipt Title -->
     <div class="receipt-report-title">
         @if($dateType == 'weekly')
-            WEEKLY BAR INVENTORY & SALES SUMMARY
+            WEEKLY COUNTER INVENTORY & SALES SUMMARY
         @else
-            DAILY BAR STOCK & SALES SHEET
+            DAILY COUNTER STOCK & SALES SHEET
         @endif
         <span class="verified-header-stamp">OFFICIAL</span>
     </div>
@@ -460,7 +460,7 @@
     
     <!-- 1. Stock Movements -->
     <div class="receipt-info-section">
-        <h3>1. Bar Stock Movements</h3>
+        <h3>1. Counter Stock Movements</h3>
         <table class="receipt-details-table">
             <thead>
                 <tr>
@@ -741,7 +741,7 @@
     <div class="signature-grid">
         <div class="signature-box">
             <div class="signature-line"></div>
-            <strong>BAR KEEPER</strong>
+            <strong>COUNTER</strong>
             <p style="font-size: 11px; margin-top: 5px;">(Signature & Date)</p>
         </div>
         <div class="signature-box">

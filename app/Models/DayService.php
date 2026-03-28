@@ -13,6 +13,12 @@ class DayService extends Model
         'guest_name',
         'guest_phone',
         'guest_email',
+        'vehicle_name',
+        'plate_number',
+        'organization',
+        'end_time',
+        'duration',
+        'purpose',
         'number_of_people',
         'adult_quantity',
         'child_quantity',
@@ -70,10 +76,10 @@ class DayService extends Model
     public function getServiceTypeNameAttribute()
     {
         $serviceKey = strtolower($this->service_type ?? '');
-        
+
         // Check for specific overrides first
         $normalizedKey = strtolower($serviceKey);
-        
+
         // Handle ceremony variations
         if (str_contains($normalizedKey, 'ceremory') || str_contains($normalizedKey, 'ceremony') || str_contains($normalizedKey, 'birthday') || str_contains($normalizedKey, 'package')) {
             return 'Ceremony/Birthday Package';
@@ -86,6 +92,10 @@ class DayService extends Model
             'swimming-with-bucket' => 'Swimming with Floating Trey',
             'swimming_with_floating_trey' => 'Swimming with Floating Trey',
             'swimming-with-floating-trey' => 'Swimming with Floating Trey',
+            'parking' => 'Parking Service',
+            'garden' => 'Garden Service',
+            'conference' => 'Conference Room',
+            'conference_room' => 'Conference Room',
             'restaurant' => 'Restaurant',
             'bar' => 'Bar',
             'other' => 'Other',
@@ -99,18 +109,18 @@ class DayService extends Model
         $catalogItem = \App\Models\ServiceCatalog::where('service_key', $this->service_type)
             ->orWhere('service_key', 'LIKE', '%' . $serviceKey . '%')
             ->first();
-            
+
         if ($catalogItem) {
             return $catalogItem->service_name;
         }
-        
+
         // Fallback
         return ucfirst(str_replace('_', ' ', $this->service_type ?? 'Unknown'));
     }
 
     public function getPaymentMethodNameAttribute()
     {
-        return match($this->payment_method) {
+        return match ($this->payment_method) {
             'cash' => 'Cash',
             'card' => 'Card',
             'mobile' => 'Mobile Money',

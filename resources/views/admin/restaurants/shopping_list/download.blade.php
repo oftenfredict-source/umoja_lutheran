@@ -1,16 +1,33 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Shopping List - {{ $shoppingList->name }} - Umoja Lutheran Hostel</title>
     <style>
         @media print {
-            @page { margin: 0 !important; size: A4; }
-            @page :first { margin-top: 0 !important; }
-            body { margin: 0 !important; padding: 0 !important; }
+            @page {
+                margin: 0 !important;
+                size: A4;
+            }
+
+            @page :first {
+                margin-top: 0 !important;
+            }
+
+            body {
+                margin: 0 !important;
+                padding: 0 !important;
+            }
         }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
             font-family: 'DejaVu Sans', Arial, sans-serif;
             font-size: 12px;
@@ -19,6 +36,7 @@
             background: #fff;
             padding: 20px;
         }
+
         .receipt-container {
             max-width: 800px;
             margin: 0 auto;
@@ -27,6 +45,7 @@
             border: 1px solid #ddd;
             position: relative;
         }
+
         .receipt-container::before {
             content: '';
             position: absolute;
@@ -44,23 +63,66 @@
             pointer-events: none;
             filter: grayscale(100%) brightness(1.2);
         }
-        .receipt-container > * { position: relative; z-index: 1; }
-        @media print {
-            .receipt-container::before { opacity: 0.1 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-            .receipt-container { border: none !important; }
-            .print-button { display: none !important; }
-            .checkmark { color: #007bff !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-            .missing-mark { color: #dc3545 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+
+        .receipt-container>* {
+            position: relative;
+            z-index: 1;
         }
+
+        @media print {
+            .receipt-container::before {
+                opacity: 0.1 !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            .receipt-container {
+                border: none !important;
+            }
+
+            .print-button {
+                display: none !important;
+            }
+
+            .checkmark {
+                color: #007bff !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            .missing-mark {
+                color: #dc3545 !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+        }
+
         .header {
             text-align: center;
             border-bottom: 3px solid #940000;
             padding-bottom: 20px;
             margin-bottom: 30px;
         }
-        .header .logo-container img { max-height: 80px; max-width: 300px; height: auto; width: auto; }
-        .header h1 { color: #940000; font-size: 28px; margin-bottom: 5px; font-weight: bold; }
+
+        .header .logo-container img {
+            max-height: 80px;
+            max-width: 300px;
+            height: auto;
+            width: auto;
+        }
+
+        .header h1 {
+            color: #940000;
+            font-size: 28px;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
         .receipt-title {
             text-align: center;
             font-size: 18px;
@@ -69,7 +131,11 @@
             color: #333;
             text-transform: uppercase;
         }
-        .info-section { margin-bottom: 25px; }
+
+        .info-section {
+            margin-bottom: 25px;
+        }
+
         .info-section h3 {
             color: #940000;
             font-size: 14px;
@@ -78,13 +144,42 @@
             margin-bottom: 15px;
             font-weight: bold;
         }
-        .info-row { display: flex; justify-content: space-between; margin-bottom: 10px; padding: 5px 0; }
-        .info-label { font-weight: bold; color: #555; width: 45%; }
-        .info-value { color: #333; width: 55%; text-align: right; }
-        .two-column { display: flex; gap: 30px; margin-bottom: 25px; }
-        .column { flex: 1; }
-        
-        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 5px 0;
+        }
+
+        .info-label {
+            font-weight: bold;
+            color: #555;
+            width: 45%;
+        }
+
+        .info-value {
+            color: #333;
+            width: 55%;
+            text-align: right;
+        }
+
+        .two-column {
+            display: flex;
+            gap: 30px;
+            margin-bottom: 25px;
+        }
+
+        .column {
+            flex: 1;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
         table th {
             background-color: #f8f9fa;
             color: #333;
@@ -94,10 +189,22 @@
             font-weight: bold;
             font-size: 10px;
         }
-        table td { padding: 6px 8px; border: 1px solid #ddd; font-size: 10px; }
-        table tbody tr:nth-child(even) { background-color: #f9f9f9; }
-        
-        .print-button { text-align: center; margin: 15px 0; }
+
+        table td {
+            padding: 6px 8px;
+            border: 1px solid #ddd;
+            font-size: 10px;
+        }
+
+        table tbody tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        .print-button {
+            text-align: center;
+            margin: 15px 0;
+        }
+
         .print-button button {
             background-color: #940000;
             color: #fff;
@@ -108,8 +215,16 @@
             border-radius: 4px;
             font-weight: bold;
         }
-        .print-button button:hover { background-color: #7b0000; }
-        .checkbox-cell { text-align: center; width: 50px; }
+
+        .print-button button:hover {
+            background-color: #7b0000;
+        }
+
+        .checkbox-cell {
+            text-align: center;
+            width: 50px;
+        }
+
         .checkbox-box {
             display: inline-block;
             width: 16px;
@@ -117,67 +232,80 @@
             border: 1px solid #333;
             background: #fff;
         }
+
         .checkmark {
             color: #007bff;
             font-size: 18px;
             font-weight: bold;
         }
+
         .missing-mark {
             color: #dc3545;
             font-size: 14px;
             font-weight: bold;
         }
+
         .missing-row {
             background-color: #fff5f5 !important;
             color: #777;
         }
+
         .missing-row td {
             text-decoration: line-through;
         }
-        .missing-row td:first-child, .missing-row td:last-child {
+
+        .missing-row td:first-child,
+        .missing-row td:last-child {
             text-decoration: none;
         }
     </style>
 </head>
+
 <body>
     <div class="receipt-container">
         <!-- Header -->
         <div class="header">
             <div class="logo-text-brand" style="margin-bottom: 10px; display: inline-block;">
-                <div style="background: #940000; color: white; width: 40px; height: 40px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold;">U</div>
+                <div
+                    style="background: #940000; color: white; width: 40px; height: 40px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold;">
+                    U</div>
             </div>
             @php
-                $uniqueDepts = $shoppingList->items->map(function($item) {
+                $uniqueDepts = $shoppingList->items->map(function ($item) {
                     return $item->purchaseRequest ? $item->purchaseRequest->getDepartmentName() : null;
                 })->filter()->unique()->sort()->values();
-                
+
                 $deptTitle = $uniqueDepts->isNotEmpty() ? '(' . $uniqueDepts->join(', ', ' & ') . ')' : '';
             @endphp
-            <h1>UMOJA LUTHERAN HOSTEL - SHOPPING LIST <span style="font-size: 0.8em; font-weight: normal;">{{ $deptTitle }}</span></h1>
-            <p style="margin-top: 5px; font-size: 11px;">Ref: SL-{{ $shoppingList->id }} | Date: {{ $shoppingList->created_at->format('d M Y') }}</p>
+            <h1>UMOJA LUTHERAN HOSTEL - SHOPPING LIST <span
+                    style="font-size: 0.8em; font-weight: normal;">{{ $deptTitle }}</span></h1>
+            <p style="margin-top: 5px; font-size: 11px;">Ref: SL-{{ $shoppingList->id }} | Date:
+                {{ $shoppingList->created_at->format('d M Y') }}
+            </p>
 
             @php
                 $estTotal = $shoppingList->items->sum('estimated_price');
                 $marketBudget = $shoppingList->budget_amount ?? $estTotal;
             @endphp
-            
-            <div style="margin-top: 10px; padding: 5px; border: 1px dotted #ccc; display: flex; justify-content: space-around; font-size: 10px;">
+
+            <div
+                style="margin-top: 10px; padding: 5px; border: 1px dotted #ccc; display: flex; justify-content: space-around; font-size: 10px;">
                 <span><strong>Market:</strong> {{ $shoppingList->market_name ?? 'Any' }}</span>
                 <span><strong>Budget to Market:</strong> {{ number_format($marketBudget, 0) }} TZS</span>
                 <span><strong>Items:</strong> {{ $shoppingList->items->count() }}</span>
             </div>
         </div>
-        
-        
+
+
         <div class="receipt-title">{{ $shoppingList->name }}</div>
-        
+
         <!-- Print Button -->
         <div class="print-button">
             <button onclick="window.print()">
                 Print List
             </button>
         </div>
-        
+
 
 
         <!-- Items Table -->
@@ -201,32 +329,47 @@
                 </thead>
                 <tbody>
                     @php 
-                        $grandTotal = 0; 
-                        $actualTotal = 0; 
-                        
-                        // Consolidate identical items across all departments to save paper
+                                                                        $grandTotal = 0;
+                        $actualTotal = 0;
+
+                        // Consolidate identical items to save paper, but PRESERVE variants
                         $consolidated = [];
                         foreach ($shoppingList->items as $item) {
-                            $key = strtolower($item->product_name) . '_' . strtolower($item->unit);
-                            
+                            // Group by Product ID AND Variant ID to ensure flavors/sizes stay separate
+                            $key = ($item->product_id ?? '0') . '-' . ($item->product_variant_id ?? '0') . '-' . strtolower($item->unit);
+
                             if (!isset($consolidated[$key])) {
+                                // Resolve a descriptive name if the saved one is too generic
+                                $displayName = $item->product_name;
+
+                                // If we have a variant but the name doesn't seem to include it, try to append it
+                                if ($item->product_variant_id && $item->product_variant) {
+                                    $vName = $item->product_variant->variant_name;
+                                    if ($vName && strtolower($vName) !== 'standard' && strtolower($vName) !== 'unit' && !str_contains(strtolower($displayName), strtolower($vName))) {
+                                        $displayName .= ' - ' . $vName;
+                                    }
+                                }
+
                                 $consolidated[$key] = [
-                                    'product_name' => $item->product_name,
+                                    'product_name' => $displayName,
                                     'category' => $item->category,
                                     'category_name' => $item->category_name,
                                     'quantity' => 0,
                                     'unit' => $item->unit,
                                     'estimated_price' => 0,
                                     'purchased_cost' => 0,
+                                    'received_quantity_kg' => 0,
+                                    'ingredient_name' => ($item->product && strtolower($item->product->name) !== strtolower($item->product_name)) ? $item->product->name : null,
                                     'is_found' => true, // Default to true for display
                                     'departments' => []
                                 ];
                             }
-                            
-                            $consolidated[$key]['quantity'] += (float)$item->quantity;
-                            $consolidated[$key]['estimated_price'] += (float)$item->estimated_price;
-                            $consolidated[$key]['purchased_cost'] += (float)$item->purchased_cost;
-                            
+
+                            $consolidated[$key]['quantity'] += (float) $item->quantity;
+                            $consolidated[$key]['estimated_price'] += (float) $item->estimated_price;
+                            $consolidated[$key]['purchased_cost'] += (float) $item->purchased_cost;
+                            $consolidated[$key]['received_quantity_kg'] += (float) $item->received_quantity_kg;
+
                             if (isset($item->is_found) && !$item->is_found) {
                                 $consolidated[$key]['is_found'] = false;
                             }
@@ -242,50 +385,62 @@
                         }
 
                         $itemsByCategory = collect($consolidated)->groupBy('category');
-                        
+
                         // Sort categories
                         $categoryOrder = ['meat_poultry', 'seafood', 'pantry', 'dairy', 'baking', 'vegetables', 'spices', 'sauces', 'bakery', 'food', 'beverages', 'water'];
-                        $sortedCategories = $itemsByCategory->keys()->sortBy(function($key) use ($categoryOrder) {
+                        $sortedCategories = $itemsByCategory->keys()->sortBy(function ($key) use ($categoryOrder) {
                             $pos = array_search($key, $categoryOrder);
                             return $pos === false ? 999 : $pos;
                         });
                     @endphp
-                    
+
+                                   
                     @foreach($sortedCategories as $categoryKey)
                         @php $items = $itemsByCategory[$categoryKey]; @endphp
-                        <tr style="background-color: #94000010;">
-                            <td colspan="{{ $shoppingList->status === 'completed' ? '7' : '6' }}" style="font-weight: bold; color: #940000; py-1;">
-                                {{ $items->first()['category_name'] }}
-                            </td>
-                        </tr>
-                        @foreach($items as $item)
-                        <tr class="{{ ($shoppingList->status === 'completed' && !$item['is_found']) ? 'missing-row' : '' }}">
-                            <td class="checkbox-cell">
-                                @if($item['is_found'])
-                                    <span class="checkmark">✓</span>
-                                @else
-                                    <span class="missing-mark">✕</span>
-                                @endif
-                            </td>
-                            <td>
-                                {{ $item['product_name'] }}
-                                <small class="text-muted">({{ implode(',', $item['departments']) }})</small>
-                            </td>
-                            <td>{{ $item['category_name'] }}</td>
-                            <td>{{ number_format($item['quantity'], 0) }}</td>
-                            <td>{{ $item['unit'] == 'bottles' ? 'PIC' : $item['unit'] }}</td>
-                            @if($shoppingList->status === 'completed')
-                                <td style="text-align: right;">{{ number_format($item['estimated_price'], 0) }}</td>
-                                <td style="text-align: right; font-weight: bold;">{{ number_format($item['purchased_cost'], 0) }}</td>
-                            @else
-                                <td style="text-align: right;">{{ number_format($item['estimated_price'], 0) }}</td>
-                            @endif
-                        </tr>
-                        @php 
-                            $grandTotal += $item['estimated_price']; 
-                            $actualTotal += $item['purchased_cost'];
-                        @endphp
-                        @endforeach
+                            <tr style="background-co lor: #94000010;">
+                                <td colspan="{{ $shoppingList->status === 'completed' ? '7' : '6' }}" style="font-weight: bold; color: #940000; py-1;">
+                                    {{ $items->first()['category_name'] }}
+                                </td>
+                            </tr>
+                             @foreach($items as $item)
+                                <tr cla ss="{{ ($shoppingList->status === 'completed' && !$item['is_found']) ? 'missing-row' : '' }}">
+                                    <td class="checkbox-cell">
+                                        @if($item['is_found'])
+                                            <span class="checkmark">✓</span>
+                                        @else
+                                            <span class="missi ng-mark">✕</span>
+                                        @endif
+                                    </td>
+                                     <td>
+                                    <strong>{{ $item['product_name'] }}</strong>
+                                    @if(isset($item['ingredient_name']) && $item['ingredient_name'])
+
+                                         <div style="font-size: 8px; color: #28a745; font-weight: bold;">Ingredient: {{ $item['ingredient_name'] }}</div>
+                                    @endif
+                                    <small class="text-muted">({{ implode(',', $item['departments']) }})</small>
+                                </td>
+                                    <td>{{ $item['category_name'] }}</td>
+                                    <td>
+                                        {{ number_format($item['quantity'], 0) }}
+                                        @if($item['received_quantity_kg'] > 0)
+                                            <div style="font-size: 8px; color: #940000; margin-top: 2px;">
+                                                <strong>{{ number_format($item['received_quantity_kg'], 2) }} KG</strong>
+                                            </div>
+                                        @endif
+                                    </td>
+                                    <td>{{ $item['unit'] == 'bottles' ? 'PIC' : $item['unit'] }}</td>
+                                    @if($shoppingList->status === 'completed')
+                                        <td style="text-align: right;">{{ number_format($item['estimated_price'], 0) }}</td>
+                                        <td style="text-align: right; font-weight: bold;">{{ number_format($item['purchased_cost'], 0) }}</td>
+                                    @else
+                                        <td style="text-align: right;">{{ number_format($item['estimated_price'], 0) }}</td>
+                                    @endif
+                                </tr>
+                                @php 
+                                                                                $grandTotal += $item['estimated_price'];
+                                    $actualTotal += $item['purchased_cost'];
+                                @endphp
+                            @endforeach
                     @endforeach
                 </tbody>
                 <tfoot>

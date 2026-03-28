@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,7 +13,13 @@
                 size: A4;
             }
         }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
             font-family: 'DejaVu Sans', Arial, sans-serif;
             font-size: 12px;
@@ -21,6 +28,7 @@
             background: #fff;
             padding: 20px;
         }
+
         .receipt-container {
             max-width: 800px;
             margin: 0 auto;
@@ -29,6 +37,7 @@
             border: 1px solid #ddd;
             position: relative;
         }
+
         .receipt-container::before {
             content: '';
             position: absolute;
@@ -46,20 +55,37 @@
             pointer-events: none;
             filter: grayscale(100%) brightness(1.2);
         }
-        .receipt-container > * { position: relative; z-index: 1; }
+
+        .receipt-container>* {
+            position: relative;
+            z-index: 1;
+        }
+
         .header {
             text-align: center;
             border-bottom: 3px solid #e07632;
             padding-bottom: 20px;
             margin-bottom: 30px;
         }
-        .header h1 { color: #e07632; font-size: 28px; margin-bottom: 5px; font-weight: bold; }
-        .header p { color: #666; font-size: 12px; margin: 2px 0; }
-        
+
+        .header h1 {
+            color: #e07632;
+            font-size: 28px;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 12px;
+            margin: 2px 0;
+        }
+
         .title-box {
             text-align: center;
             margin-bottom: 30px;
         }
+
         .title-box h2 {
             display: inline-block;
             border: 2px solid #333;
@@ -73,28 +99,52 @@
             justify-content: space-between;
             margin-bottom: 30px;
         }
-        .info-col { flex: 1; }
+
+        .info-col {
+            flex: 1;
+        }
+
         .info-col h3 {
             color: #e07632;
             font-size: 14px;
             margin-bottom: 10px;
             border-bottom: 1px solid #ddd;
         }
-        .info-item { margin-bottom: 5px; font-size: 11px; }
 
-        .details-table { width: 100%; border-collapse: collapse; margin-bottom: 40px; }
-        .details-table th, .details-table td { padding: 12px; text-align: left; border: 1px solid #ddd; }
-        .details-table th { background-color: #f8f9fa; font-weight: bold; }
+        .info-item {
+            margin-bottom: 5px;
+            font-size: 11px;
+        }
+
+        .details-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 40px;
+        }
+
+        .details-table th,
+        .details-table td {
+            padding: 12px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+
+        .details-table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
 
         .signature-section {
             margin-top: 50px;
             display: flex;
             justify-content: space-between;
         }
+
         .signature-box {
             width: 200px;
             text-align: center;
         }
+
         .signature-line {
             border-top: 1px solid #333;
             margin-bottom: 5px;
@@ -110,6 +160,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="receipt-container">
         <div class="header">
@@ -128,12 +179,13 @@
                 <h3>Transfer Details</h3>
                 <div class="info-item"><strong>Date:</strong> {{ $transfer->transfer_date->format('M d, Y') }}</div>
                 <div class="info-item"><strong>Status:</strong> {{ ucfirst($transfer->status) }}</div>
-                <div class="info-item"><strong>Transferred By:</strong> {{ $transfer->transferredBy->name ?? 'N/A' }}</div>
+                <div class="info-item"><strong>Transferred By:</strong> {{ $transfer->transferredBy->name ?? 'N/A' }}
+                </div>
             </div>
             <div class="info-col" style="padding-left: 50px;">
                 <h3>Receiver</h3>
                 <div class="info-item"><strong>Name:</strong> {{ $transfer->receivedBy->name ?? 'N/A' }}</div>
-                <div class="info-item"><strong>Role:</strong> Bar Keeper</div>
+                <div class="info-item"><strong>Role:</strong> Counter</div>
             </div>
         </div>
 
@@ -143,37 +195,91 @@
                     <th>Description</th>
                     <th>Package Details</th>
                     <th style="text-align: center;">Quantity</th>
-                    <th style="text-align: right;">Valuation (Selling)</th>
+                    <th style="text-align: right;">Valuation</th>
                 </tr>
             </thead>
             <tbody>
+                @php
+                    $beverageCategories = ['spirits', 'wines', 'non_alcoholic_beverage', 'alcoholic_beverage', 'energy_drinks', 'juices', 'water', 'hot_beverages', 'cocktails'];
+                    $category = $transfer->product->category ?? '';
+                    $isBeverage = in_array($category, $beverageCategories);
+
+                    $baseUnit = $isBeverage ? 'Bottle' : ($transfer->productVariant->receiving_unit ?? $transfer->productVariant->measurement ?? 'Unit');
+                    $baseUnitPlural = $isBeverage ? 'Bottles' : $baseUnit;
+
+                    $packagingName = $transfer->productVariant->packaging_name ?? $transfer->productVariant->packaging ?? 'Unit';
+                    $singularPkg = \Illuminate\Support\Str::singular($packagingName);
+
+                    $sp = $transfer->selling_price > 0 ? $transfer->selling_price : ($transfer->productVariant->selling_price_per_pic ?? 0);
+
+                    // --- Reliable cost calculation ---
+                    // Determine per-bottle cost from unit_cost column.
+                    // unit_cost semantics: represents cost per "selected unit" (package or bottle)
+                    // total_bottles = quantity_transferred * items_per_package (when packages)
+                    $storedUnitCost = (float) ($transfer->unit_cost ?? 0);
+                    $itemsPerPkg    = (int) ($transfer->productVariant->items_per_package ?? 1);
+
+                    if ($storedUnitCost == 0) {
+                        // Last resort: ask variant for latest cost (per-bottle)
+                        $bp_per_bottle = $transfer->productVariant ? (float) $transfer->productVariant->getLatestUnitCost() : 0;
+                    } elseif ($transfer->quantity_unit === 'packages' && $itemsPerPkg > 1) {
+                        // If unit_cost > (selling price per bottle * 1.5), it's likely a package price
+                        // Otherwise it's already per-bottle
+                        if ($storedUnitCost > $sp * 1.5) {
+                            $bp_per_bottle = $storedUnitCost / $itemsPerPkg; // package price → per-bottle
+                        } else {
+                            $bp_per_bottle = $storedUnitCost; // already per-bottle
+                        }
+                    } else {
+                        $bp_per_bottle = $storedUnitCost;
+                    }
+
+                    $totalBottles     = (float) $transfer->total_bottles;
+                    $total_collection = $totalBottles * $sp;
+                    $total_cost_calc  = $totalBottles * $bp_per_bottle;
+                    $total_profit     = $total_collection - $total_cost_calc;
+                    $bp_per_unit      = $bp_per_bottle; // alias for non-beverage display
+                @endphp
                 <tr>
                     <td>
                         <strong>{{ $transfer->product->name }}</strong>
-                        <br><small>{{ $transfer->productVariant->measurement }}</small>
+                        <br><small>{{ $transfer->productVariant->variant_name }}</small>
                     </td>
                     <td>
-                        {{ $transfer->productVariant->packaging_name ?? $transfer->productVariant->packaging }}
-                        <br><small>({{ $transfer->productVariant->items_per_package }} Bottles/{{ \Illuminate\Support\Str::singular($transfer->productVariant->packaging_name ?? $transfer->productVariant->packaging) }})</small>
+                        {{ $packagingName }}
+                        <br><small>({{ $transfer->productVariant->items_per_package }}
+                            {{ $baseUnitPlural }}/{{ $singularPkg }})</small>
                     </td>
                     <td style="text-align: center;">
                         {{ number_format($transfer->quantity_transferred) }} {{ $transfer->quantity_unit_name }}
-                        <br><small class="text-info">({{ number_format($transfer->total_bottles) }} Bottles)</small>
+                        <br><small class="text-info">({{ number_format($transfer->total_bottles) }}
+                            {{ $baseUnitPlural }})</small>
                     </td>
                     <td style="text-align: right;">
-                        {{ number_format($transfer->selling_price, 2) }} / Bottle
-                        <br><strong>Collection: {{ number_format($transfer->expected_revenue, 2) }} TSh</strong>
-                        <br><small class="text-success">Est. Profit: {{ number_format($transfer->expected_profit, 2) }} TSh</small>
+                        @if($isBeverage && $sp > 0)
+                            {{ number_format($sp, 2) }} / {{ $baseUnit }}
+                            <br><strong>Collection: {{ number_format($total_collection, 2) }} TSh</strong>
+                            <br><small class="{{ $total_profit >= 0 ? 'text-success' : 'text-danger' }}">Est. Profit:
+                                {{ number_format($total_profit, 2) }} TSh</small>
+                        @elseif(!$isBeverage)
+                            <span class="text-muted">Internal Transfer</span>
+                            <br><small>Cost/{{ $baseUnit }}: {{ number_format($bp_per_unit, 2) }}</small>
+                            <br><strong>Total Cost: {{ number_format($transfer->total_bottles * $bp_per_unit, 2) }}
+                                TSh</strong>
+                        @else
+                            {{ number_format($sp, 2) }} / {{ $baseUnit }}
+                            <br><strong>Value: {{ number_format($total_collection, 2) }} TSh</strong>
+                        @endif
                     </td>
                 </tr>
             </tbody>
         </table>
 
         @if($transfer->notes)
-        <div style="margin-bottom: 30px;">
-            <h3>Notes:</h3>
-            <p style="font-size: 11px; font-style: italic;">{{ $transfer->notes }}</p>
-        </div>
+            <div style="margin-bottom: 30px;">
+                <h3>Notes:</h3>
+                <p style="font-size: 11px; font-style: italic;">{{ $transfer->notes }}</p>
+            </div>
         @endif
 
         <div class="signature-section">
@@ -183,7 +289,7 @@
             </div>
             <div class="signature-box">
                 <div class="signature-line"></div>
-                <p>Received By (Bar)</p>
+                <p>Received By (Counter)</p>
             </div>
         </div>
 
@@ -194,8 +300,8 @@
     </div>
 
     <script>
-        window.onload = function() { window.print(); };
+        window.onload = function () { window.print(); };
     </script>
 </body>
-</html>
 
+</html>

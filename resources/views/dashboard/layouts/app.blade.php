@@ -472,6 +472,10 @@
               $currentRole = 'housekeeper';
             } elseif ($normalizedRole === 'waiter' || strtolower($rawRole) === 'waiter') {
               $currentRole = 'waiter';
+            } elseif ($normalizedRole === 'storekeeper' || strtolower($rawRole) === 'storekeeper') {
+              $currentRole = 'storekeeper';
+            } elseif ($normalizedRole === 'accountant' || strtolower($rawRole) === 'accountant') {
+              $currentRole = 'accountant';
             } else {
               $currentRole = 'manager'; // default fallback
             }
@@ -495,6 +499,10 @@
           $logoRoute = route('bar-keeper.dashboard');
         } elseif ($currentRole === 'waiter') {
           $logoRoute = route('waiter.dashboard');
+        } elseif ($currentRole === 'storekeeper') {
+          $logoRoute = route('storekeeper.dashboard');
+        } elseif ($currentRole === 'accountant') {
+          $logoRoute = route('accountant.dashboard');
         } elseif (in_array($currentRole, ['customer', 'guest'])) {
           $logoRoute = route('customer.dashboard');
         } else {
@@ -622,6 +630,12 @@
               } elseif ($headerRole === 'waiter') {
                 $profileRoute = route('waiter.profile');
                 $logoutRoute = route('waiter.logout');
+              } elseif ($headerRole === 'storekeeper') {
+                $profileRoute = route('storekeeper.profile');
+                $logoutRoute = route('storekeeper.logout');
+              } elseif ($headerRole === 'accountant') {
+                $profileRoute = route('accountant.profile');
+                $logoutRoute = route('accountant.logout');
               } else {
                 $profileRoute = route('customer.profile');
                 $logoutRoute = route('customer.logout');
@@ -703,6 +717,10 @@
                     $displayRole = 'housekeeper';
                   } elseif ($normalizedRole === 'waiter' || strtolower($rawRole) === 'waiter') {
                     $displayRole = 'waiter';
+                  } elseif ($normalizedRole === 'storekeeper' || strtolower($rawRole) === 'storekeeper') {
+                    $displayRole = 'storekeeper';
+                  } elseif ($normalizedRole === 'accountant' || strtolower($rawRole) === 'accountant') {
+                    $displayRole = 'accountant';
                   }
                 } elseif ($currentAuthUser instanceof \App\Models\Guest) {
                   $displayRole = 'customer';
@@ -713,7 +731,7 @@
               if ($displayRole === 'customer' || $displayRole === 'Customer') {
                 echo 'Hostel Guest';
               } elseif ($displayRole === 'bar_keeper') {
-                echo 'Bar Keeper';
+                echo 'Counter';
               } elseif ($displayRole === 'head_chef') {
                 echo 'Head Chef';
               } elseif ($displayRole === 'super_admin') {
@@ -754,6 +772,10 @@
                 $sessionRole = 'housekeeper';
               } elseif ($normalizedRole === 'waiter' || $rawRole === 'waiter') {
                 $sessionRole = 'waiter';
+              } elseif ($normalizedRole === 'storekeeper' || $rawRole === 'storekeeper') {
+                $sessionRole = 'storekeeper';
+              } elseif ($normalizedRole === 'accountant' || $rawRole === 'accountant') {
+                $sessionRole = 'accountant';
               }
             } elseif ($currentAuthUser instanceof \App\Models\Guest) {
               $sessionRole = 'customer';
@@ -788,6 +810,12 @@
           } elseif ($sidebarUserRole === 'waiter') {
             $sidebarRole = 'waiter';
             $sidebarFile = 'dashboard.partials.sidebar-waiter';
+          } elseif ($sidebarUserRole === 'storekeeper') {
+            $sidebarRole = 'storekeeper';
+            $sidebarFile = 'dashboard.partials.sidebar-storekeeper';
+          } elseif ($sidebarUserRole === 'accountant') {
+            $sidebarRole = 'accountant';
+            $sidebarFile = 'dashboard.partials.sidebar-accountant';
           } elseif ($sidebarUserRole === 'customer') {
             $sidebarRole = 'customer';
             $sidebarFile = 'dashboard.partials.sidebar-customer';
@@ -832,6 +860,36 @@
     <!-- Toast Notification Container -->
     <div id="toast-container"></div>
     
+    <!-- Store Announcements Marquee -->
+    @if(isset($activeStoreAnnouncements) && $activeStoreAnnouncements->isNotEmpty())
+        @php
+            $isManagerAlert = $activeStoreAnnouncements->contains(function($a) {
+                return $a->creator && in_array(strtolower(trim($a->creator->role)), ['manager', 'super_admin', 'super admin', 'super_admin']);
+            });
+        @endphp
+        <div class="store-announcement-marquee" style="position: fixed; top: 50px; left: 0; width: 100%; background-color: #fff; border-bottom: 2px solid var(--primary-color); z-index: 999; height: 35px; display: flex; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+            <div style="background: var(--primary-color); color: #fff; padding: 0 15px; height: 100%; display: flex; align-items: center; font-weight: bold; white-space: nowrap; z-index: 1001;">
+                <i class="fa fa-bullhorn mr-2"></i> {{ $isManagerAlert ? 'ALERT' : 'STORE ALERT' }}:
+            </div>
+            <marquee behavior="scroll" direction="left" scrollamount="5" style="font-size: 16px; color: #333; font-weight: 600; padding: 5px 0;">
+                @foreach($activeStoreAnnouncements as $announcement)
+                    <span style="margin-right: 100px;">{{ $announcement->message }}</span>
+                @endforeach
+            </marquee>
+        </div>
+        <style>
+            .app-content { margin-top: 85px !important; }
+            .app-sidebar { margin-top: 35px !important; }
+            @media (max-width: 767px) {
+                .app-sidebar { margin-top: 35px !important; }
+            }
+        </style>
+    @else
+        <style>
+            .app-content { margin-top: 50px !important; }
+        </style>
+    @endif
+
     <main class="app-content">
       @yield('content')
     </main>
@@ -1184,7 +1242,6 @@
           }
         }
       }
-
       }
 
       // Toast Notification System for Action Required Notifications

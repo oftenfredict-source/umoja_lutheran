@@ -18,14 +18,14 @@ class StockTransferController extends Controller
     {
         $user = Auth::guard('staff')->user();
         $role = strtolower($user->role ?? 'manager');
-        
+
         $query = StockTransfer::with(['product', 'productVariant', 'transferredBy', 'receivedBy']);
-        
+
         // Filter by status
         if ($request->has('status') && in_array($request->status, ['pending', 'completed', 'cancelled'])) {
             $query->where('status', $request->status);
         }
-        
+
         // Filter by date range
         if ($request->has('date_from')) {
             $query->where('transfer_date', '>=', $request->date_from);
@@ -33,31 +33,31 @@ class StockTransferController extends Controller
         if ($request->has('date_to')) {
             $query->where('transfer_date', '<=', $request->date_to);
         }
-        
+
         // Search
         if ($request->has('search')) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('transfer_reference', 'LIKE', "%{$search}%")
-                  ->orWhereHas('product', function($q2) use ($search) {
-                      $q2->where('name', 'LIKE', "%{$search}%");
-                  })
-                  ->orWhereHas('transferredBy', function($q2) use ($search) {
-                      $q2->where('name', 'LIKE', "%{$search}%");
-                  });
+                    ->orWhereHas('product', function ($q2) use ($search) {
+                        $q2->where('name', 'LIKE', "%{$search}%");
+                    })
+                    ->orWhereHas('transferredBy', function ($q2) use ($search) {
+                        $q2->where('name', 'LIKE', "%{$search}%");
+                    });
             });
         }
-        
+
         // Filter by type
         $type = $request->query('type', 'drink');
-        $query->whereHas('product', function($q) use ($type) {
+        $query->whereHas('product', function ($q) use ($type) {
             $q->where('type', $type);
         });
-        
+
         $transfers = $query->orderBy('transfer_date', 'desc')
-                          ->orderBy('created_at', 'desc')
-                          ->paginate(20);
-        
+            ->orderBy('created_at', 'desc')
+            ->paginate(20);
+
         return view('dashboard.stock-transfers-list', compact('transfers', 'role', 'type'));
     }
 
@@ -68,25 +68,25 @@ class StockTransferController extends Controller
     {
         $user = Auth::guard('staff')->user();
         $role = strtolower($user->role ?? 'manager');
-        
+
         $type = $request->query('type', 'drink');
-        
-        $products = Product::with(['variants'])
+
+        $products = Product::with(['variants', 'supplier'])
             ->where('is_active', true)
             ->where('type', $type)
             ->orderBy('name')
             ->get();
-        
+
         // Auto-select bar keeper (get the first/only one)
-        $barKeeper = Staff::where(function($q) {
-                            $q->where('role', 'bar_keeper')
-                              ->orWhere('role', 'bar keeper')
-                              ->orWhere('role', 'bartender');
-                        })
-                        ->where('is_active', true)
-                        ->orderBy('name')
-                        ->first();
-        
+        $barKeeper = Staff::where(function ($q) {
+            $q->where('role', 'bar_keeper')
+                ->orWhere('role', 'bar keeper')
+                ->orWhere('role', 'bartender');
+        })
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->first();
+
         // Calculate available stock for each variant
         $availableStock = [];
         foreach ($products as $product) {
@@ -94,34 +94,34 @@ class StockTransferController extends Controller
                 // Calculate total packages received
                 $totalPackagesReceived = \App\Models\StockReceipt::where('product_variant_id', $variant->id)
                     ->sum('quantity_received_packages');
-                
+
                 // Calculate total packages transferred
                 $totalPackagesTransferred = StockTransfer::where('product_variant_id', $variant->id)
                     ->where('quantity_unit', 'packages')
                     ->where('status', '!=', 'cancelled')
                     ->sum('quantity_transferred');
-                
+
                 // Calculate total bottles transferred and convert to packages
                 $totalBottlesTransferred = StockTransfer::where('product_variant_id', $variant->id)
                     ->where('quantity_unit', 'bottles')
                     ->where('status', '!=', 'cancelled')
                     ->sum('quantity_transferred');
-                
-                $bottlesToPackages = $variant->items_per_package > 0 
-                    ? floor($totalBottlesTransferred / $variant->items_per_package) 
+
+                $bottlesToPackages = $variant->items_per_package > 0
+                    ? floor($totalBottlesTransferred / $variant->items_per_package)
                     : 0;
-                
+
                 // Available packages and bottles
                 $availablePackages = max(0, $totalPackagesReceived - ($totalPackagesTransferred + $bottlesToPackages));
                 $availableBottles = $availablePackages * ($variant->items_per_package ?? 0);
-                
+
                 $availableStock[$variant->id] = [
                     'packages' => $availablePackages,
                     'bottles' => $availableBottles,
                 ];
             }
         }
-        
+
         return view('dashboard.stock-transfer-form', compact('products', 'barKeeper', 'availableStock', 'role', 'type'));
     }
 
@@ -169,8 +169,23 @@ class StockTransferController extends Controller
         $validated['transfer_reference'] = StockTransfer::generateReference();
         $validated['status'] = 'pending';
 
+        // If unit_cost is not provided, fetch it and normalize to the correct unit
+        if (empty($validated['unit_cost'])) {
+            // getLatestUnitCost() always returns cost per BASE unit (per bottle / per kg)
+            $perBaseUnit = $variant->getLatestUnitCost();
+
+            // unit_cost should represent cost per "selected unit" (per package, or per bottle/unit)
+            // getBuyingPriceAttribute divides by items_per_package when unit='packages'
+            // so we need to STORE the per-PACKAGE price so the accessor gives the correct per-bottle result
+            if ($validated['quantity_unit'] === 'packages' && ($variant->items_per_package ?? 0) > 0) {
+                $validated['unit_cost'] = $perBaseUnit * $variant->items_per_package;
+            } else {
+                $validated['unit_cost'] = $perBaseUnit;
+            }
+        }
+
         $transfer = StockTransfer::create($validated);
-        
+
         // Calculate revenue projections
         $transfer->calculateRevenueProjections();
         $transfer->save();
@@ -193,7 +208,7 @@ class StockTransferController extends Controller
     public function show(StockTransfer $stockTransfer)
     {
         $stockTransfer->load(['product', 'productVariant', 'transferredBy', 'receivedBy']);
-        
+
         return response()->json([
             'success' => true,
             'transfer' => $stockTransfer,

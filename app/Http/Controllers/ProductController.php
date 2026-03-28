@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Product;
 use App\Models\Supplier;
 use App\Models\ProductVariant;
+use App\Models\Department;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -19,9 +20,9 @@ class ProductController extends Controller
     {
         $user = Auth::guard('staff')->user();
         $role = strtolower($user->role ?? 'manager');
-        
+
         $query = Product::with(['supplier', 'variants']);
-        
+
         // Bar Keeper only sees bar products (drinks)
         if ($role === 'bar_keeper') {
             $query->where('type', 'drink');
@@ -31,22 +32,22 @@ class ProductController extends Controller
                 $query->where('type', $request->type);
             }
         }
-        
+
         // Filter by category
         if ($request->has('category')) {
             $query->where('category', $request->category);
         }
-        
+
         // Search
         if ($request->has('search')) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('name', 'LIKE', "%{$search}%")
-                  ->orWhere('brand_or_type', 'LIKE', "%{$search}%")
-                  ->orWhere('description', 'LIKE', "%{$search}%");
+                    ->orWhere('brand_or_type', 'LIKE', "%{$search}%")
+                    ->orWhere('description', 'LIKE', "%{$search}%");
             });
         }
-        
+
         // Order by category priority and then name
         $query->orderByRaw("CASE 
             WHEN category IN ('non_alcoholic_beverage', 'energy_drinks', 'juices') THEN 1
@@ -58,26 +59,32 @@ class ProductController extends Controller
             WHEN category = 'cocktails' THEN 7
             ELSE 8 END")
             ->orderBy('name');
-            
+
         // Clone for stats before pagination
         $statsQuery = clone $query;
         $totalBrands = $statsQuery->count();
-        $totalVariants = \App\Models\ProductVariant::whereHas('product', function($q) use ($role, $request) {
-            if ($role === 'bar_keeper') $q->where('type', 'drink');
-            if ($request->has('category')) $q->where('category', $request->category);
+        $totalVariants = \App\Models\ProductVariant::whereHas('product', function ($q) use ($role, $request) {
+            if ($role === 'bar_keeper')
+                $q->where('type', 'drink');
+            if ($request->has('category'))
+                $q->where('category', $request->category);
         })->count();
         $totalCategories = $statsQuery->distinct()->count('category');
         $activeItems = $statsQuery->where('is_active', true)->count();
-        
+
         $products = $query->paginate(200);
-        
+
         $summaryStats = [
             'brands' => $totalBrands,
             'variants' => $totalVariants,
             'categories' => $totalCategories,
             'active' => $activeItems
         ];
-        
+
+        if ($role === 'storekeeper') {
+            return view('dashboard.storekeeper.products.index', compact('products', 'role', 'summaryStats'));
+        }
+
         return view('dashboard.products-list', compact('products', 'role', 'summaryStats'));
     }
 
@@ -88,10 +95,11 @@ class ProductController extends Controller
     {
         $user = Auth::guard('staff')->user();
         $role = strtolower($user->role ?? 'manager');
-        
+
         $suppliers = Supplier::where('is_active', true)->orderBy('name')->get();
-        
-        return view('dashboard.product-form', compact('suppliers', 'role'));
+        $departments = Department::where('is_active', true)->orderBy('name')->get();
+
+        return view('dashboard.product-form', compact('suppliers', 'departments', 'role'));
     }
 
     /**
@@ -104,31 +112,38 @@ class ProductController extends Controller
             'category' => 'required|string',
             'description' => 'nullable|string',
             'type' => 'nullable|string',
-            
+
             // Variants Validation
             'variants' => 'required|array|min:1',
             'variants.*.name' => 'required|string|max:255',
-            'variants.*.measurement' => 'required|string',
-            'variants.*.unit' => 'required|string', // ml, l, etc.
-            'variants.*.selling_method' => 'required|in:pic,glass,mixed',
+            'variants.*.measurement' => 'nullable|string',
+            'variants.*.unit' => 'nullable|string', // ml, l, etc.
+            'variants.*.selling_method' => 'nullable|in:pic,glass,mixed',
             'variants.*.image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
-            
+            'variants.*.selling_price_per_pic' => 'nullable|numeric|min:0',
+            'variants.*.selling_price_per_serving' => 'nullable|numeric|min:0',
+
             // Configuration checks
             'variants.*.servings' => 'nullable|integer|min:1',
+
+            // Departments Integration
+            'departments' => 'nullable|array',
+            'departments.*' => 'exists:departments,id',
+            'department_categories' => 'nullable|array',
         ]);
 
         $user = Auth::guard('staff')->user();
         $role = $user->role;
         $isBarKeeper = ($role === 'bar_keeper' || $role === 'barkeeper');
-        
+
         DB::beginTransaction();
         try {
             // Determine valid type (drink or food)
             $type = 'drink'; // Default
             if (isset($validated['type'])) {
-                 if ($validated['type'] === 'food' || $validated['type'] === 'kitchen') {
-                     $type = 'food';
-                 }
+                if ($validated['type'] === 'food' || $validated['type'] === 'kitchen') {
+                    $type = 'food';
+                }
             }
             // Auto-detect from category if needed
             $foodCategories = ['food', 'meat_poultry', 'seafood', 'pantry', 'dairy', 'baking', 'vegetables', 'spices', 'sauces', 'bakery'];
@@ -142,19 +157,22 @@ class ProductController extends Controller
                 'category' => $validated['category'],
                 'description' => $validated['description'],
                 'type' => $type,
+                'is_returnable' => $request->boolean('is_returnable'),
                 'is_active' => true,
                 'supplier_id' => null, // Optional now
             ];
-            
+
             $product = Product::create($productData);
 
             // 2. Create Variants
             foreach ($request->variants as $index => $variantData) {
-                // Determine selling flags
-                $method = $variantData['selling_method'];
+                // Determine selling flags (only applicable to drinks usually, but default applied)
+                $method = $variantData['selling_method'] ?? 'pic';
+
+                // For food items selling_method might be null/missing, so default to pic behavior logically
                 $canSellPic = in_array($method, ['pic', 'mixed']);
-                $canSellServing = in_array($method, ['glass', 'mixed']);
-                
+                $canSellServing = in_array($method, ['glass', 'mixed']) && $type !== 'food';
+
                 // Handle Variant Image
                 $imagePath = null;
                 if (isset($variantData['image']) && $variantData['image'] instanceof \Illuminate\Http\UploadedFile) {
@@ -164,30 +182,48 @@ class ProductController extends Controller
                 ProductVariant::create([
                     'product_id' => $product->id,
                     'variant_name' => $variantData['name'],
-                    'measurement' => $variantData['measurement'] . ' ' . $variantData['unit'],
+                    'measurement' => isset($variantData['measurement']) && isset($variantData['unit'])
+                        ? ($variantData['measurement'] . ' ' . $variantData['unit'])
+                        : ($variantData['measurement'] ?? $variantData['unit'] ?? null),
                     'image' => $imagePath,
-                    
+
+                    // Box/Crate/Unit Configurations
+                    'purchasing_unit' => $variantData['purchasing_unit'] ?? null,
+                    'receiving_unit' => $variantData['receiving_unit'] ?? null,
+                    'items_per_package' => $variantData['items_per_package'] ?? 1, // Default conversion is 1:1
+
                     // Selling Config
                     'can_sell_as_pic' => $canSellPic,
                     'can_sell_as_serving' => $canSellServing,
-                    'selling_unit' => $canSellServing ? ($variantData['unit'] === 'ml' ? 'glass' : 'serving') : 'pic',
+                    'selling_unit' => $canSellServing ? (($variantData['unit'] ?? '') === 'ml' ? 'glass' : 'serving') : 'pic',
                     'servings_per_pic' => $variantData['servings'] ?? 1,
-                    
-                    // Prices (Set to 0 as they are managed via stock/prices)
-                    'selling_price_per_pic' => 0,
-                    'selling_price_per_serving' => 0,
-                    
+
+                    // Prices
+                    'selling_price_per_pic' => $variantData['selling_price_per_pic'] ?? 0,
+                    'selling_price_per_serving' => $variantData['selling_price_per_serving'] ?? 0,
+
                     'display_order' => $index,
                     'is_active' => true,
                 ]);
             }
-            
+
+            // 3. Attach Departments and their Category Overrides
+            if (isset($request->departments) && is_array($request->departments)) {
+                $attachments = [];
+                foreach ($request->departments as $deptId) {
+                    $attachments[$deptId] = [
+                        'category' => $request->department_categories[$deptId] ?? null,
+                    ];
+                }
+                $product->departments()->sync($attachments);
+            }
+
             DB::commit();
 
             $routePrefix = $isBarKeeper ? 'bar-keeper' : 'admin';
             return redirect()->route($routePrefix . '.products.index')
                 ->with('success', 'Brand and ' . count($request->variants) . ' items registered successfully!');
-                
+
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->with('error', 'Failed to register product: ' . $e->getMessage())->withInput();
@@ -200,17 +236,17 @@ class ProductController extends Controller
     public function show(Product $product)
     {
         $product->load(['supplier', 'variants']);
-        
+
         if (request()->expectsJson()) {
             return response()->json([
                 'success' => true,
                 'product' => $product,
             ]);
         }
-        
+
         $user = Auth::guard('staff')->user();
         $role = strtolower($user->role ?? 'manager');
-        
+
         return view('dashboard.product-show', compact('product', 'role'));
     }
 
@@ -221,11 +257,12 @@ class ProductController extends Controller
     {
         $user = Auth::guard('staff')->user();
         $role = strtolower($user->role ?? 'manager');
-        
+
         $suppliers = Supplier::where('is_active', true)->orderBy('name')->get();
-        $product->load('variants');
-        
-        return view('dashboard.product-form', compact('product', 'suppliers', 'role'));
+        $departments = Department::where('is_active', true)->orderBy('name')->get();
+        $product->load(['variants', 'departments']);
+
+        return view('dashboard.product-form', compact('product', 'suppliers', 'departments', 'role'));
     }
 
     /**
@@ -241,11 +278,18 @@ class ProductController extends Controller
             'variants' => 'required|array|min:1',
             'variants.*.id' => 'nullable|exists:product_variants,id',
             'variants.*.name' => 'required|string|max:255',
-            'variants.*.measurement' => 'required|string',
-            'variants.*.unit' => 'required|string', // ml, l
-            'variants.*.selling_method' => 'required|in:pic,glass,mixed',
+            'variants.*.measurement' => 'nullable|string',
+            'variants.*.unit' => 'nullable|string', // ml, l
+            'variants.*.selling_method' => 'nullable|in:pic,glass,mixed',
             'variants.*.image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
             'variants.*.servings' => 'nullable|integer|min:1',
+            'variants.*.selling_price_per_pic' => 'nullable|numeric|min:0',
+            'variants.*.selling_price_per_serving' => 'nullable|numeric|min:0',
+
+            // Departments Integration
+            'departments' => 'nullable|array',
+            'departments.*' => 'exists:departments,id',
+            'department_categories' => 'nullable|array',
         ]);
 
         DB::beginTransaction();
@@ -263,6 +307,7 @@ class ProductController extends Controller
                 'category' => $validated['category'],
                 'description' => $validated['description'],
                 'type' => $type,
+                'is_returnable' => $request->boolean('is_returnable'),
                 'supplier_id' => $validated['supplier_id'] ?? null,
             ]);
 
@@ -270,17 +315,28 @@ class ProductController extends Controller
             $existingVariantIds = [];
             foreach ($request->variants as $index => $variantData) {
                 // Determine selling flags
-                $method = $variantData['selling_method'];
+                $method = $variantData['selling_method'] ?? 'pic';
+
                 $canSellPic = in_array($method, ['pic', 'mixed']);
-                $canSellServing = in_array($method, ['glass', 'mixed']);
+                $canSellServing = in_array($method, ['glass', 'mixed']) && $type !== 'food';
 
                 $data = [
                     'variant_name' => $variantData['name'],
-                    'measurement' => $variantData['measurement'] . ' ' . $variantData['unit'],
+                    'measurement' => isset($variantData['measurement']) && isset($variantData['unit'])
+                        ? ($variantData['measurement'] . ' ' . $variantData['unit'])
+                        : ($variantData['measurement'] ?? $variantData['unit'] ?? null),
+
+                    // Box/Crate/Unit Configurations
+                    'purchasing_unit' => $variantData['purchasing_unit'] ?? null,
+                    'receiving_unit' => $variantData['receiving_unit'] ?? null,
+                    'items_per_package' => $variantData['items_per_package'] ?? 1,
+
                     'can_sell_as_pic' => $canSellPic,
                     'can_sell_as_serving' => $canSellServing,
-                    'selling_unit' => $canSellServing ? ($variantData['unit'] === 'ml' ? 'glass' : 'serving') : 'pic',
+                    'selling_unit' => $canSellServing ? (($variantData['unit'] ?? '') === 'ml' ? 'glass' : 'serving') : 'pic',
                     'servings_per_pic' => $variantData['servings'] ?? 1,
+                    'selling_price_per_pic' => $variantData['selling_price_per_pic'] ?? 0,
+                    'selling_price_per_serving' => $variantData['selling_price_per_serving'] ?? 0,
                     'display_order' => $index,
                 ];
 
@@ -309,8 +365,21 @@ class ProductController extends Controller
             // $product->variants()->whereNotIn('id', $existingVariantIds)->delete(); 
             // Commented out deletion to prevent accidental data loss until better UI is in place
 
+            // Sync Departments and their Category Overrides
+            if (isset($request->departments) && is_array($request->departments)) {
+                $attachments = [];
+                foreach ($request->departments as $deptId) {
+                    $attachments[$deptId] = [
+                        'category' => $request->department_categories[$deptId] ?? null,
+                    ];
+                }
+                $product->departments()->sync($attachments);
+            } else {
+                $product->departments()->detach();
+            }
+
             DB::commit();
-            
+
             return redirect()->route($this->getRoutePrefix() . '.products.index', ['type' => $product->type])
                 ->with('success', 'Product updated successfully!');
 
@@ -362,12 +431,12 @@ class ProductController extends Controller
     {
         $variant = ProductVariant::findOrFail($id);
         $product = $variant->product;
-        
+
         // Check if variant has specific dependencies if needed (like order items)
         // For now, allow delete.
-        
+
         $variant->delete();
-        
+
         // If parent product has no more variants, delete it too? 
         // Or keep it empty? Let's keep it for now, or check count.
         if ($product->variants()->count() === 0) {
@@ -378,7 +447,7 @@ class ProductController extends Controller
                 'reload' => true
             ]);
         }
-        
+
         if (request()->expectsJson()) {
             return response()->json([
                 'success' => true,
@@ -386,7 +455,7 @@ class ProductController extends Controller
                 'reload' => true
             ]);
         }
-        
+
         return back()->with('success', 'Variant deleted successfully!');
     }
 
@@ -397,9 +466,9 @@ class ProductController extends Controller
     {
         $user = Auth::guard('staff')->user();
         $role = strtolower($user->role ?? 'manager');
-        
+
         $variant->load('product');
-        
+
         return view('dashboard.product-configure-serving', compact('variant', 'role'));
     }
 
@@ -416,9 +485,9 @@ class ProductController extends Controller
             'selling_price_per_pic' => 'nullable|numeric|min:0',
             'selling_price_per_serving' => 'nullable|numeric|min:0',
         ]);
-        
+
         $variant->update($validated);
-        
+
         if ($request->expectsJson()) {
             return response()->json([
                 'success' => true,
@@ -426,7 +495,7 @@ class ProductController extends Controller
                 'variant' => $variant->fresh(),
             ]);
         }
-        
+
         return redirect()->route($this->getRoutePrefix() . '.products.show', $variant->product_id)
             ->with('success', 'Serving configuration updated successfully!');
     }
@@ -437,6 +506,10 @@ class ProductController extends Controller
     private function getRoutePrefix(): string
     {
         $role = strtolower(auth()->guard('staff')->user()->role ?? 'manager');
-        return ($role === 'bar_keeper') ? 'bar-keeper' : 'admin';
+        if ($role === 'bar_keeper')
+            return 'bar-keeper';
+        if ($role === 'storekeeper')
+            return 'storekeeper';
+        return 'admin';
     }
 }

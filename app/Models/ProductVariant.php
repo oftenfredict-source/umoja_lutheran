@@ -12,6 +12,8 @@ class ProductVariant extends Model
         'image',
         'measurement',
         'packaging',
+        'purchasing_unit', // e.g. Sado, Carton
+        'receiving_unit',  // e.g. Kg, Litre
         'items_per_package',
         'minimum_stock_level',
         'minimum_stock_level_unit',
@@ -55,7 +57,7 @@ class ProductVariant extends Model
     // Accessors
     public function getPackagingNameAttribute()
     {
-        return match($this->packaging) {
+        return match ($this->packaging) {
             'crates' => 'Crates',
             'carton' => 'Carton',
             'boxes' => 'Boxes',
@@ -67,7 +69,7 @@ class ProductVariant extends Model
 
     public function getSellingUnitNameAttribute()
     {
-        return match($this->selling_unit) {
+        return match ($this->selling_unit) {
             'pic' => 'PIC (Bottle)',
             'glass' => 'Glass',
             'tot' => 'Tot/Shot',
@@ -113,5 +115,91 @@ class ProductVariant extends Model
     public function getTotalServings($picsQuantity)
     {
         return $picsQuantity * ($this->servings_per_pic ?? 1);
+    }
+
+    /**
+     * Get the current stock level in base units (bottles for drinks, kg/pcs for food/cleaning)
+     */
+    public function getLatestUnitCost()
+    {
+        // 1. Check for Shopping List items with explicit KG measurement (Most accurate for food)
+        $measuredShoppingItem = \App\Models\ShoppingListItem::where('product_variant_id', $this->id)
+            ->where('is_purchased', true)
+            ->where('received_quantity_kg', '>', 0)
+            ->orderBy('created_at', 'desc')
+            ->first();
+
+        if ($measuredShoppingItem && $measuredShoppingItem->purchased_cost > 0) {
+            return (float) ($measuredShoppingItem->purchased_cost / $measuredShoppingItem->received_quantity_kg);
+        }
+
+        // 2. Try to get the latest cost from StockReceipts
+        $receipt = \App\Models\StockReceipt::where('product_variant_id', $this->id)
+            ->orderBy('received_date', 'desc')
+            ->orderBy('created_at', 'desc')
+            ->first();
+
+        if ($receipt && $receipt->buying_price_per_bottle > 0) {
+            return (float) $receipt->buying_price_per_bottle;
+        }
+
+        // 3. Fallback to any latest Shopping List items
+        $shoppingItem = \App\Models\ShoppingListItem::where('product_variant_id', $this->id)
+            ->where('is_purchased', true)
+            ->where('unit_price', '>', 0)
+            ->orderBy('created_at', 'desc')
+            ->first();
+
+        if ($shoppingItem) {
+            $price = (float) $shoppingItem->unit_price;
+
+            // If the unit used in shopping list was a known package unit, normalize to base unit
+            $packageUnits = ['crate', 'crates', 'package', 'packages', 'carton', 'cartons', 'case', 'cases', 'box', 'boxes', 'bundle', 'bundles', 'sado'];
+            if (in_array(strtolower($shoppingItem->unit ?? ''), $packageUnits) && ($this->items_per_package ?? 0) > 1) {
+                return $price / $this->items_per_package;
+            }
+
+            return $price;
+        }
+
+        return 0;
+    }
+
+    public function getCurrentStock()
+    {
+        // 1. Total In (Receipts + Shopping List)
+        $receiptsIn = \DB::table('stock_receipts')
+            ->join('product_variants', 'stock_receipts.product_variant_id', '=', 'product_variants.id')
+            ->join('products', 'stock_receipts.product_id', '=', 'products.id')
+            ->where('stock_receipts.product_variant_id', $this->id)
+            ->sum(\DB::raw('CASE WHEN products.category = "food" THEN quantity_received_packages ELSE (quantity_received_packages * product_variants.items_per_package) END'));
+
+        $shoppingIn = \DB::table('shopping_list_items')
+            ->join('product_variants', 'shopping_list_items.product_variant_id', '=', 'product_variants.id')
+            ->join('products', 'shopping_list_items.product_id', '=', 'products.id')
+            ->where('shopping_list_items.product_variant_id', $this->id)
+            ->where('shopping_list_items.is_purchased', true)
+            ->sum(\DB::raw('CASE 
+                WHEN (received_quantity_kg > 0) THEN received_quantity_kg 
+                WHEN (unit = "crates" OR unit = "carton" OR unit = "packages") AND products.category != "food" THEN purchased_quantity * product_variants.items_per_package 
+                ELSE purchased_quantity 
+            END'));
+
+        // 1.5 Total Returned
+        $returnsIn = \DB::table('stock_returns')
+            ->where('product_variant_id', $this->id)
+            ->where('status', 'received')
+            ->sum('quantity');
+
+        $totalIn = (float) $receiptsIn + (float) $shoppingIn + (float) $returnsIn;
+
+        // 2. Total Out (Transfers)
+        $transfersOut = \DB::table('stock_transfers')
+            ->join('product_variants', 'stock_transfers.product_variant_id', '=', 'product_variants.id')
+            ->where('stock_transfers.product_variant_id', $this->id)
+            ->where('stock_transfers.status', 'completed')
+            ->sum(\DB::raw('CASE WHEN quantity_unit = "packages" THEN quantity_transferred * product_variants.items_per_package ELSE quantity_transferred END'));
+
+        return $totalIn - (float) $transfersOut;
     }
 }

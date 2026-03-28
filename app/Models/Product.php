@@ -15,10 +15,12 @@ class Product extends Model
         'description',
         'type',
         'is_active',
+        'is_returnable',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
+        'is_returnable' => 'boolean',
     ];
 
     // Relationships
@@ -42,13 +44,21 @@ class Product extends Model
         return $this->hasMany(ShoppingListItem::class);
     }
 
+    public function departments()
+    {
+        return $this->belongsToMany(Department::class, 'department_product')
+            ->withPivot('category', 'notes')
+            ->withTimestamps();
+    }
+
     // Accessors
     public function getCategoryNameAttribute()
     {
-        return match($this->category) {
+        return match ($this->category) {
             'spirits' => 'Spirits',
             'wines' => 'Wines',
-            'non_alcoholic_beverage' => 'Soda / Soft Drinks',
+            'non_alcoholic_beverage' => 'Soft Drinks',
+            'cleaning_supplies' => 'Housekeeping',
             'energy_drinks' => 'Energy Drinks',
             'juices' => 'Juices',
             'hot_beverages' => 'Hot Beverages',

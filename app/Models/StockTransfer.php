@@ -19,7 +19,6 @@ class StockTransfer extends Model
         'transfer_date',
         'received_at',
         'notes',
-        // PIC-based revenue tracking
         'unit_cost',
         'total_cost',
         'selling_price_per_pic',
@@ -27,19 +26,24 @@ class StockTransfer extends Model
         'servings_per_pic',
         'expected_revenue_pic_sale',
         'expected_revenue_serving_sale',
+        'expected_profit_pic_sale',
         'expected_profit_serving_sale',
         'expiry_date',
     ];
 
     protected $appends = ['expected_profit', 'total_bottles', 'selling_price', 'expected_revenue', 'buying_price'];
 
-    /**
-     * Get the buying price per bottle from the latest receipt
-     */
     public function getBuyingPriceAttribute()
     {
-        $receipt = $this->getLatestReceipt();
-        return $receipt ? $receipt->buying_price_per_bottle : 0;
+        // Use the saved unit cost if present, else fallback
+        if ($this->unit_cost !== null && $this->unit_cost > 0) {
+            return $this->quantity_unit === 'packages' && ($this->productVariant->items_per_package ?? 0) > 0
+                ? $this->unit_cost / $this->productVariant->items_per_package
+                : $this->unit_cost;
+        }
+
+        // Fallback to the intelligent latest cost from the variant
+        return $this->productVariant ? $this->productVariant->getLatestUnitCost() : 0;
     }
 
     /**
@@ -47,14 +51,23 @@ class StockTransfer extends Model
      */
     public function getExpectedRevenueAttribute()
     {
+        // Try to use the stored PIC-based revenue first
+        if ($this->expected_revenue_pic_sale > 0) {
+            return $this->expected_revenue_pic_sale;
+        }
         return $this->total_bottles * $this->selling_price;
     }
 
     /**
-     * Get the selling price per bottle from the latest receipt
+     * Get the selling price per bottle/unit
      */
     public function getSellingPriceAttribute()
     {
+        // For drinks, selling price usually comes from variant settings
+        if ($this->productVariant && $this->productVariant->selling_price_per_pic > 0) {
+            return $this->productVariant->selling_price_per_pic;
+        }
+
         $receipt = $this->getLatestReceipt();
         return $receipt ? $receipt->selling_price_per_bottle : 0;
     }
@@ -114,7 +127,7 @@ class StockTransfer extends Model
     // Accessors
     public function getStatusNameAttribute()
     {
-        return match($this->status) {
+        return match ($this->status) {
             'pending' => 'Pending',
             'completed' => 'Completed',
             'cancelled' => 'Cancelled',
@@ -124,10 +137,11 @@ class StockTransfer extends Model
 
     public function getQuantityUnitNameAttribute()
     {
-        return match($this->quantity_unit) {
+        return match ($this->quantity_unit) {
             'packages' => $this->productVariant->packaging_name ?? 'Packages',
             'bottles' => 'Bottles',
-            default => 'Packages',
+            'units' => 'Units',
+            default => ucfirst($this->quantity_unit),
         };
     }
 
@@ -157,11 +171,14 @@ class StockTransfer extends Model
      */
     public function getExpectedProfitAttribute()
     {
-        $receipt = $this->getLatestReceipt();
-        if (!$receipt) return 0;
+        // Use the saved profit fields first if present
+        if ($this->expected_profit_pic_sale !== null && $this->expected_profit_pic_sale != 0) {
+            return $this->expected_profit_pic_sale;
+        }
 
-        $profitPerBottle = $receipt->selling_price_per_bottle - $receipt->buying_price_per_bottle;
-        
+        // Otherwise calculate manually
+        $profitPerBottle = $this->selling_price - $this->buying_price;
+
         $totalItems = $this->quantity_transferred;
         if ($this->quantity_unit === 'packages') {
             $totalItems *= ($this->productVariant->items_per_package ?? 0);
@@ -194,18 +211,21 @@ class StockTransfer extends Model
         }
 
         // Calculate total cost
-        $this->total_cost = $this->quantity_transferred * ($this->unit_cost ?? 0);
+        if (($this->unit_cost === null || $this->unit_cost == 0) && $this->productVariant) {
+            $this->unit_cost = $this->productVariant->getLatestUnitCost();
+        }
+        $this->total_cost = $this->total_bottles * ($this->unit_cost ?? 0);
 
         // Get prices from variant if not set
         $this->selling_price_per_pic = $this->selling_price_per_pic ?? $this->productVariant->selling_price_per_pic ?? 0;
         $this->selling_price_per_serving = $this->selling_price_per_serving ?? $this->productVariant->selling_price_per_serving ?? 0;
         $this->servings_per_pic = $this->servings_per_pic ?? $this->productVariant->servings_per_pic ?? 1;
 
-        // Calculate expected revenue for PIC sale
-        $this->expected_revenue_pic_sale = $this->quantity_transferred * $this->selling_price_per_pic;
+        // Calculate expected revenue for PIC sale (must multiply by total discrete items, not packages)
+        $this->expected_revenue_pic_sale = $this->total_bottles * $this->selling_price_per_pic;
 
         // Calculate expected revenue for serving sale
-        $totalServings = $this->quantity_transferred * $this->servings_per_pic;
+        $totalServings = $this->total_bottles * $this->servings_per_pic;
         $this->expected_revenue_serving_sale = $totalServings * $this->selling_price_per_serving;
 
         // Calculate profits
