@@ -17,9 +17,17 @@ class CheckAuth
     public function handle(Request $request, Closure $next): Response
     {
         // Check both staff and guest guards
-        $user = auth()->guard('staff')->user() ?? auth()->guard('guest')->user();
-        
-        if (!$user) {
+        $staff = auth()->guard('staff')->user();
+        $guest = auth()->guard('guest')->user();
+
+        \Log::channel('daily')->info('--- Auth Check Middleware ---', [
+            'staff_logged_in' => $staff ? $staff->id : 'NO',
+            'guest_logged_in' => $guest ? $guest->id : 'NO',
+            'session_id' => $request->session()->getId(),
+            'url' => $request->fullUrl(),
+        ]);
+
+        if (!$staff && !$guest) {
             return redirect()->route('login');
         }
 
