@@ -5,10 +5,12 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\RoomController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BookingController;
+use App\Http\Controllers\StoreAnnouncementController;
+use App\Http\Controllers\EmergencyAuthController;
 
 // Default landing page redirects to login
 // Default landing page shows login directly
-Route::get('/', [AuthController::class, 'showUnifiedLogin'])->name('index');
+Route::get('/', [EmergencyAuthController::class, 'showUnifiedLogin'])->name('index');
 
 // Debug Route to check session persistence
 Route::get('/debug-session', function (Request $request) {
