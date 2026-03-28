@@ -17,7 +17,16 @@ class CheckSingleSession
     public function handle(Request $request, Closure $next): Response
     {
         // Skip session check for login, logout, and public routes
-        $skipRoutes = ['login', 'login.post', 'logout', 'booking.index', 'booking.check-availability'];
+        $skipRoutes = [
+            'login',
+            'login.post',
+            'logout',
+            'booking.index',
+            'booking.check-availability',
+            'emergency-login',
+            'login-success-test',
+            'index'
+        ];
         $routeName = $request->route()?->getName();
 
         // Always allow login and logout routes

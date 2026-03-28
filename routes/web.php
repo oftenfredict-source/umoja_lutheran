@@ -12,6 +12,11 @@ use App\Http\Controllers\EmergencyAuthController;
 // Default landing page shows login directly
 Route::get('/', [EmergencyAuthController::class, 'showUnifiedLogin'])->name('index');
 
+// Middleware-free baseline test
+Route::get('/ping', function () {
+    return "PONG v1.0 - Laravel is alive at " . date('Y-m-d H:i:s');
+});
+
 // Debug Route to check session persistence
 Route::get('/debug-session', function (Request $request) {
     return [
