@@ -23,6 +23,15 @@ echo "<b>Session Counter:</b> " . $_SESSION['test_counter'] . " (Refresh to see 
 echo "<b>Session ID:</b> " . session_id() . "<br>";
 echo "<p>If the ID is empty or the counter stays at 1, then PHP Sessions are broken on this server.</p>";
 
+echo "<h2>Raw Cookie Persistence Test</h2>";
+$cookieName = 'raw_test_cookie';
+if (!isset($_COOKIE[$cookieName])) {
+    setcookie($cookieName, 'working_' . time(), time() + 3600, '/', '', true, true);
+    echo "<b>Status:</b> Setting new cookie... (Refresh to see if it stayed)<br>";
+} else {
+    echo "<b>Status:</b> Cookie found! Value: " . $_COOKIE[$cookieName] . "<br>";
+}
+
 // Try to write a test file
 $testFile = $sessionsPath . '/write_test.txt';
 $canWrite = @file_put_contents($testFile, 'test');
