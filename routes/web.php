@@ -17,8 +17,11 @@ Route::get('/debug-session', function (Request $request) {
         'is_logged_in_staff' => auth()->guard('staff')->check(),
         'is_logged_in_guest' => auth()->guard('guest')->check(),
         'user_id' => auth()->guard('staff')->id() ?? auth()->guard('guest')->id(),
-        'session_all' => $request->session()->all(),
+        'session_driver' => config('session.driver'),
+        'session_secure' => config('session.secure'),
+        'session_domain' => config('session.domain'),
         'app_url' => config('app.url'),
+        'session_all' => $request->session()->all(),
     ];
 });
 
