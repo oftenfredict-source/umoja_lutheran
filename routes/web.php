@@ -10,6 +10,18 @@ use App\Http\Controllers\BookingController;
 // Default landing page shows login directly
 Route::get('/', [AuthController::class, 'showUnifiedLogin'])->name('index');
 
+// Debug Route to check session persistence
+Route::get('/debug-session', function (Request $request) {
+    return [
+        'session_id' => $request->session()->getId(),
+        'is_logged_in_staff' => auth()->guard('staff')->check(),
+        'is_logged_in_guest' => auth()->guard('guest')->check(),
+        'user_id' => auth()->guard('staff')->id() ?? auth()->guard('guest')->id(),
+        'session_all' => $request->session()->all(),
+        'app_url' => config('app.url'),
+    ];
+});
+
 // Landing Pages Routes - DISABLED
 // Route::get('/home', function () {
 //     return view('landing_page_views.index');
