@@ -483,97 +483,23 @@ class EmergencyAuthController extends Controller
             }
 
             // Credentials are valid - Login directly (OTP DISABLED)
-            \Log::channel('daily')->info('--- ALL CHECKS PASSED - LOGGING IN ---', [
+            \Log::channel('daily')->info('--- ATTEMPTING SIMPLE LOGIN ---', [
                 'user_id' => $user->id,
-                'user_type' => $userType,
-                'session_id_before' => $request->session()->getId()
+                'type' => $userType
             ]);
 
-            // Log in the user
-            $remember = $request->has('remember');
-            try {
-                if ($userType === 'staff') {
-                    \Log::channel('daily')->info('Calling Auth::guard(staff)->login');
-                    Auth::guard('staff')->login($user, $remember);
-                } else {
-                    \Log::channel('daily')->info('Calling Auth::guard(guest)->login');
-                    Auth::guard('guest')->login($user, $remember);
-                }
-                \Log::channel('daily')->info('Auth::login() call successful');
-            } catch (\Throwable $authErr) {
-                \Log::channel('daily')->error('CRITICAL: Auth::login failed', [
-                    'msg' => $authErr->getMessage(),
-                    'type' => get_class($authErr)
-                ]);
-                throw $authErr;
+            // Simple login without regeneration for now to avoid timeouts
+            if ($userType === 'staff') {
+                Auth::guard('staff')->login($user, $request->has('remember'));
+            } else {
+                Auth::guard('guest')->login($user, $request->has('remember'));
             }
 
-            \Log::channel('daily')->info('Forcing session save');
-            $request->session()->put('login_timestamp', now()->toDateTimeString());
-            $request->session()->save();
-            \Log::channel('daily')->info('Session saved successfully', ['new_id' => $request->session()->getId()]);
-
-            // Get the session ID
-            $sessionId = $request->session()->getId();
-
-            \Log::channel('daily')->info('Updating user session fields in DB');
-            try {
-                // Generate new session token
-                $sessionToken = \Illuminate\Support\Str::random(60);
-
-                // Update user with new session token and session ID
-                $user->session_token = hash('sha256', $sessionToken);
-                $user->last_session_id = $sessionId;
-                $user->save();
-                \Log::channel('daily')->info('User DB update successful');
-
-                // Update sessions table with user_id
-                if (Schema::hasTable('sessions')) {
-                    \Log::channel('daily')->info('Updating sessions table');
-                    DB::table('sessions')
-                        ->where('id', $sessionId)
-                        ->update([
-                            'user_id' => $user->id,
-                            'ip_address' => $request->ip(),
-                            'user_agent' => $request->userAgent(),
-                        ]);
-                    \Log::channel('daily')->info('Sessions table update successful');
-                }
-
-                // Store session token in session
-                $request->session()->put('user_session_token', $sessionToken);
-                \Log::channel('daily')->info('Session token stored in session');
-            } catch (\Throwable $dbErr) {
-                \Log::channel('daily')->error('CRITICAL: Post-login DB update failed', [
-                    'msg' => $dbErr->getMessage(),
-                    'type' => get_class($dbErr)
-                ]);
-                // We will CONTINUE anyway to see if login persists
-            }
-
-            // Log login activity
-            try {
-                ActivityLog::create([
-                    'user_id' => $user->id,
-                    'user_type' => get_class($user),
-                    'action' => 'logged_in',
-                    'description' => "User logged in: {$user->name} ({$user->email})",
-                    'ip_address' => $request->ip(),
-                    'user_agent' => $request->userAgent(),
-                ]);
-            } catch (\Throwable $trackErr) {
-                \Log::warning('Post-login tracking failed: ' . $trackErr->getMessage());
-            }
+            $request->session()->put('login_verified', true);
+            \Log::channel('daily')->info('--- REDIRECTING TO Dashboard ---');
 
             // Get user role
             $userRole = $user->role ?? 'guest';
-
-            \Log::info('--- Auth Success Logged ---', [
-                'user_id' => $user->id,
-                'is_staff_check' => Auth::guard('staff')->check(),
-                'is_staff_id' => Auth::guard('staff')->id(),
-                'session_id' => $request->session()->getId(),
-            ]);
 
             // Get intended URL
             $intendedUrl = $request->session()->pull('url.intended');
@@ -589,30 +515,6 @@ class EmergencyAuthController extends Controller
                 route('storekeeper.dashboard'),
                 route('accountant.dashboard'),
             ];
-
-            if ($intendedUrl && !in_array($intendedUrl, $validDashboardRoutes)) {
-                $isValidPath = str_contains($intendedUrl, '/admin/') ||
-                    str_contains($intendedUrl, '/super-admin/') ||
-                    str_contains($intendedUrl, '/reception/') ||
-                    str_contains($intendedUrl, '/bar-keeper/') ||
-                    str_contains($intendedUrl, '/chef-master/') ||
-                    str_contains($intendedUrl, '/customer/') ||
-                    str_contains($intendedUrl, '/accountant/');
-
-                if (
-                    !$isValidPath || str_contains($intendedUrl, '/notifications/') ||
-                    str_contains($intendedUrl, '/api/') ||
-                    str_contains($intendedUrl, '/ajax/')
-                ) {
-                    $intendedUrl = null;
-                }
-            }
-
-            \Log::channel('daily')->info('--- FINAL REDIRECT ---', [
-                'user_id' => $user->id,
-                'role' => $userRole,
-                'redirect_route' => $userRole === 'super_admin' ? 'super_admin.dashboard' : ($userRole === 'manager' ? 'admin.dashboard' : 'others')
-            ]);
 
             // Redirect based on user role
             if ($userRole === 'super_admin') {
