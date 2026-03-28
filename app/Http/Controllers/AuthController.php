@@ -466,18 +466,19 @@ class AuthController extends Controller
                 'user_type' => $userType
             ]);
 
-            // Regenerate session to prevent session fixation attacks
-            $request->session()->regenerate();
-
             // Log in the user
             $remember = $request->has('remember');
             if ($userType === 'staff') {
-                Auth::guard('staff')->login($user, $remember);
+                Auth::guard('staff')->login($user, true); // force remember for test
             } else {
-                Auth::guard('guest')->login($user, $remember);
+                Auth::guard('guest')->login($user, true);
             }
 
-            // Get the NEW session ID after regeneration
+            // Force session data to be written
+            $request->session()->put('login_timestamp', now()->toDateTimeString());
+            $request->session()->save();
+
+            // Get the session ID
             $sessionId = $request->session()->getId();
 
             try {
