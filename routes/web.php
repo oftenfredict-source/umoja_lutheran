@@ -11,114 +11,36 @@ use App\Http\Controllers\BookingController;
 Route::get('/', [AuthController::class, 'showUnifiedLogin'])->name('index');
 
 // Landing Pages Routes - DISABLED
-/*
-Route::get('/home', function () {
-    return view('landing_page_views.index');
-});
+// Route::get('/home', function () {
+//     return view('landing_page_views.index');
+// });
 
-Route::get('/about-us', function () {
-    return view('landing_page_views.about-us');
-});
+// Route::get('/about-us', function () {
+//     return view('landing_page_views.about-us');
+// });
 
-Route::get('/services', function () {
-    return view('landing_page_views.services');
-});
+// Route::get('/services', function () {
+//     return view('landing_page_views.services');
+// });
 
-Route::get('/rooms', function () {
-    return view('landing_page_views.rooms');
-});
+// Route::get('/rooms', function () {
+//     return view('landing_page_views.rooms');
+// });
 
-Route::get('/gallery', function () {
-    // Get all images from gallery_photos folder
-    $galleryPath = public_path('gallery_photos');
-    $images = [];
-    
-    // Log for debugging
-    \Log::info('Gallery route called', [
-        'gallery_path' => $galleryPath,
-        'path_exists' => is_dir($galleryPath),
-        'path_readable' => is_readable($galleryPath),
-    ]);
-    
-    if (is_dir($galleryPath)) {
-        try {
-            // Use DirectoryIterator for better cross-platform support and case-insensitive matching
-            $iterator = new \DirectoryIterator($galleryPath);
-            foreach ($iterator as $file) {
-                if ($file->isFile() && !$file->isDot()) {
-                    $extension = strtolower($file->getExtension());
-                    // Support common image formats (jpg, jpeg, png, gif, webp)
-                    if (in_array($extension, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
-                        $images[] = $file->getFilename();
-                    }
-                }
-            }
-        } catch (\Exception $e) {
-            \Log::error('Gallery directory error: ' . $e->getMessage(), [
-                'path' => $galleryPath,
-                'trace' => $e->getTraceAsString()
-            ]);
-            // Fallback to glob if DirectoryIterator fails
-            $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
-            foreach ($allowedExtensions as $ext) {
-                $files = glob($galleryPath . '/*.' . $ext);
-                $files = array_merge($files, glob($galleryPath . '/*.' . strtoupper($ext)));
-                if ($files) {
-                    foreach ($files as $file) {
-                        $images[] = basename($file);
-                    }
-                }
-            }
-        }
-        
-        // Remove duplicates and sort
-        $images = array_unique($images);
-        sort($images);
-        
-        \Log::info('Gallery images found', [
-            'count' => count($images),
-            'images' => $images
-        ]);
-    } else {
-        \Log::warning('Gallery directory does not exist', [
-            'path' => $galleryPath,
-            'public_path' => public_path(),
-            'base_path' => base_path(),
-        ]);
-    }
-    
-    return view('landing_page_views.gallery', ['images' => $images]);
-})->name('gallery.index');
+// Route::get('/gallery', function () {
+//     // ... gallery logic ...
+// })->name('gallery.index');
 
-// Blog route removed - blog functionality disabled
-// Route::get('/blog', function () {
-//     $posts = \App\Models\BlogPost::published()
-//         ->latest('published_at')
-//         ->paginate(9);
-//     
-//     $latestPosts = \App\Models\BlogPost::published()
-//         ->latest('published_at')
-//         ->limit(4)
-//         ->get();
-//     
-//     return view('landing_page_views.blog', [
-//         'posts' => $posts,
-//         'latestPosts' => $latestPosts,
-//     ]);
-// })->name('blog.index');
-
-Route::get('/contact', function () {
-    return view('landing_page_views.contact');
-});
+// Route::get('/contact', function () {
+//     return view('landing_page_views.contact');
+// });
 
 // Newsletter Subscription Route
 Route::post('/newsletter/subscribe', [\App\Http\Controllers\NewsletterController::class, 'subscribe'])->name('newsletter.subscribe');
 
-Route::get('/elements', function () {
-    return view('landing_page_views.elements');
-});
-
-*/
+// Route::get('/elements', function () {
+//     return view('landing_page_views.elements');
+// });
 // Booking Routes
 Route::get('/booking', [BookingController::class, 'index'])->name('booking.index');
 Route::post('/booking/check-availability', [BookingController::class, 'checkAvailability'])->name('booking.check-availability');
