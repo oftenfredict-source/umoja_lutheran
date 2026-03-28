@@ -521,6 +521,13 @@ class AuthController extends Controller
             // Get user role
             $userRole = $user->role ?? 'guest';
 
+            \Log::info('--- Auth Success Logged ---', [
+                'user_id' => $user->id,
+                'is_staff_check' => Auth::guard('staff')->check(),
+                'is_staff_id' => Auth::guard('staff')->id(),
+                'session_id' => $request->session()->getId(),
+            ]);
+
             // Get intended URL
             $intendedUrl = $request->session()->pull('url.intended');
             $validDashboardRoutes = [
