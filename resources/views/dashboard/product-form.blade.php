@@ -473,6 +473,7 @@
 
         function checkFoodCategory() {
             let isFood = false;
+            let isBeverage = false;
             let isHousekeeping = false;
             
             // 1. Check main Category dropdown
