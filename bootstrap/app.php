@@ -19,32 +19,28 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => \App\Http\Middleware\CheckRole::class,
         ]);
 
+        // Trust all proxies for correct HTTPS/Session handling behind cPanel/proxy
+        $middleware->trustProxies(at: '*');
+
         // Trust proxies for proper HTTPS detection behind cPanel/proxy
-        // This ensures Laravel correctly detects HTTPS when behind cPanel's proxy/load balancer
         $middleware->web(prepend: [
             \App\Http\Middleware\TrustProxies::class,
         ]);
 
         // Add CSRF debugging middleware (only when debug is enabled via env)
-        // Use env() directly since config() isn't available yet at this bootstrap stage
         if (env('APP_DEBUG', false) || env('ENABLE_CSRF_DEBUG', false)) {
             $middleware->web(append: [
                 \App\Http\Middleware\CsrfDebugMiddleware::class,
             ]);
         }
 
-        // Add single session check to web middleware group (runs on all web requests)
-        $middleware->web(append: [
-            \App\Http\Middleware\CheckSingleSession::class,
-        ]);
-
-        // Trust all proxies for correct HTTPS/Session handling behind cPanel/proxy
-        $middleware->trustProxies(at: '*');
-
-        // Exclude login routes from CSRF to stop "Page Expired" errors
+        // NOTE: CheckSingleSession is intentionally NOT added as global middleware.
+        // It is applied per-route group in routes/web.php.
+        // This prevents redirect loops on the login page.
+    
+        // Exclude login routes from CSRF using URL patterns (not route names)
         $middleware->validateCsrfTokens(except: [
             'login',
-            'login/*',
             'api/*',
         ]);
     })
