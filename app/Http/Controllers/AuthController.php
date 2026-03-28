@@ -347,6 +347,7 @@ class AuthController extends Controller
             'session_cookie_name' => config('session.cookie'),
         ]);
 
+        \Log::info('Unified login starting validation');
         try {
             // Validate email and password (OTP disabled)
             $validationRules = [
@@ -357,17 +358,18 @@ class AuthController extends Controller
             $request->validate($validationRules);
             \Log::info('Validation passed - Direct login (OTP disabled)');
         } catch (\Illuminate\Validation\ValidationException $e) {
-            \Log::error('Validation failed', ['errors' => $e->errors()]);
+            \Log::error('Validation failed in unified', ['errors' => $e->errors()]);
             return back()->withErrors($e->errors())->withInput($request->only('email'));
         } catch (\Exception $e) {
             \Log::error('Login validation error', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'error' => $e->getMessage()
             ]);
             return back()->withErrors([
-                'email' => 'An error occurred during login. Please try again.'
+                'email' => 'An error occurred during validation.'
             ])->withInput($request->only('email'));
         }
+
+        \Log::info('IP check starting');
 
         try {
             // Check if IP address is blocked
@@ -390,6 +392,8 @@ class AuthController extends Controller
                     'email' => "Your IP address ({$ipAddress}) has been blocked. Access denied until {$blockedUntil}."
                 ])->withInput($request->only('email'));
             }
+
+            \Log::info('IP check passed, proceeding to authenticate');
 
             // Step 1: Validate credentials and login directly (OTP DISABLED)
             $credentials = $request->only('email', 'password');
