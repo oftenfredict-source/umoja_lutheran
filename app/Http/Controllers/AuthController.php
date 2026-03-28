@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Models\Staff;
 use App\Models\Guest;
 use App\Models\FailedLoginAttempt;
+use Illuminate\Support\Facades\Schema;
 use App\Models\LoginOtp;
 use App\Models\SystemLog;
 use App\Mail\LoginOtpMail;
@@ -465,6 +466,9 @@ class AuthController extends Controller
                 'user_type' => $userType
             ]);
 
+            // Regenerate session to prevent session fixation attacks
+            $request->session()->regenerate();
+
             // Log in the user
             $remember = $request->has('remember');
             if ($userType === 'staff') {
@@ -473,31 +477,45 @@ class AuthController extends Controller
                 Auth::guard('guest')->login($user, $remember);
             }
 
-            // Regenerate session to prevent session fixation attacks
-            $request->session()->regenerate();
-
             // Get the NEW session ID after regeneration
             $sessionId = $request->session()->getId();
 
-            // Generate new session token
-            $sessionToken = \Illuminate\Support\Str::random(60);
+            try {
+                // Generate new session token
+                $sessionToken = \Illuminate\Support\Str::random(60);
 
-            // Update user with new session token and session ID
-            $user->session_token = hash('sha256', $sessionToken);
-            $user->last_session_id = $sessionId;
-            $user->save();
+                // Update user with new session token and session ID
+                $user->session_token = hash('sha256', $sessionToken);
+                $user->last_session_id = $sessionId;
+                $user->save();
 
-            // Update sessions table with user_id
-            DB::table('sessions')
-                ->where('id', $sessionId)
-                ->update([
+                // Update sessions table with user_id
+                if (Schema::hasTable('sessions')) {
+                    DB::table('sessions')
+                        ->where('id', $sessionId)
+                        ->update([
+                            'user_id' => $user->id,
+                            'ip_address' => $request->ip(),
+                            'user_agent' => $request->userAgent(),
+                        ]);
+                }
+
+                // Store session token in session
+                $request->session()->put('user_session_token', $sessionToken);
+
+                // Log login activity
+                ActivityLog::create([
                     'user_id' => $user->id,
+                    'user_type' => get_class($user),
+                    'action' => 'logged_in',
+                    'description' => "User logged in: {$user->name} ({$user->email})",
                     'ip_address' => $request->ip(),
                     'user_agent' => $request->userAgent(),
                 ]);
-
-            // Store session token in session
-            $request->session()->put('user_session_token', $sessionToken);
+            } catch (\Exception $e) {
+                \Log::warning('Post-login tracking failed: ' . $e->getMessage());
+                // Continue with redirect anyway
+            }
 
             // Get user role
             $userRole = $user->role ?? 'guest';
@@ -534,16 +552,6 @@ class AuthController extends Controller
                     $intendedUrl = null;
                 }
             }
-
-            // Log login activity
-            ActivityLog::create([
-                'user_id' => $user->id,
-                'user_type' => get_class($user),
-                'action' => 'logged_in',
-                'description' => "User logged in: {$user->name} ({$user->email})",
-                'ip_address' => $request->ip(),
-                'user_agent' => $request->userAgent(),
-            ]);
 
             // Redirect based on user role
             if ($userRole === 'super_admin') {
