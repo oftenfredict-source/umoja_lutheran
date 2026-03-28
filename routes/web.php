@@ -92,8 +92,8 @@ Route::middleware(['check.auth'])->group(function () {
 });
 
 // Unified Login Routes (for all users)
-Route::get('/login', [AuthController::class, 'showUnifiedLogin'])->name('login');
-Route::post('/login', [AuthController::class, 'loginUnified'])->name('login.post');
+Route::get('/login', [EmergencyAuthController::class, 'showUnifiedLogin'])->name('login');
+Route::post('/login', [EmergencyAuthController::class, 'loginUnified'])->name('login.post');
 // OTP Routes (DISABLED - Direct login enabled)
 // Route::get('/login/resend-otp', [AuthController::class, 'resendOtp'])->name('login.resend-otp');
 // Route::post('/login/verify-otp', [AuthController::class, 'verifyOtp'])->name('login.verify');
@@ -433,12 +433,11 @@ Route::prefix('manager')->group(function () {
 
         // Corporate Group Checkout
         Route::post('/bookings/checkout-company-group/{company}', [\App\Http\Controllers\ReceptionController::class, 'checkoutCompanyGroup'])->name('admin.bookings.checkout-company-group');
-        Route::post('/bookings/checkout-company-payment/{company}', [\App\Http\Controllers\ReceptionController::class, 'processCompanyPayment'])->name('admin.bookings.checkout-company-payment');
-
         // Checkout Bill (Manager/Reception Operations)
         Route::get('/bookings/{booking}/checkout-bill', [\App\Http\Controllers\ServiceRequestController::class, 'generateCheckoutBill'])->name('admin.bookings.checkout-bill');
 
-        Route::post('/logout', [AuthController::class, 'logout'])->name('admin.logout');
+        // Unified Logout Route
+        Route::post('/logout', [App\Http\Controllers\EmergencyAuthController::class, 'logout'])->name('logout');
     });
 });
 
