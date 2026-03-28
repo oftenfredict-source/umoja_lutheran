@@ -424,14 +424,17 @@ class EmergencyAuthController extends Controller
                 // Check password
                 if (Hash::check($credentials['password'], $staff->password)) {
                     \Log::channel('daily')->info('Staff password correct', ['email' => $credentials['email']]);
+                    \Log::channel('daily')->info('Checking if staff is active', ['is_active' => $staff->is_active]);
                     // Check if staff is active
                     if (!$staff->is_active) {
+                        \Log::channel('daily')->warning('Staff account inactive', ['email' => $credentials['email']]);
                         return back()->withErrors([
                             'email' => 'Your account has been deactivated. Please contact administrator.'
                         ])->withInput($request->only('email'));
                     }
                     $user = $staff;
                     $userType = 'staff';
+                    \Log::channel('daily')->info('User object set to Staff');
                 } else {
                     \Log::channel('daily')->warning('Staff password incorrect', ['email' => $credentials['email']]);
                 }
@@ -480,28 +483,35 @@ class EmergencyAuthController extends Controller
             }
 
             // Credentials are valid - Login directly (OTP DISABLED)
-            \Log::info('Logging in user directly - OTP disabled', [
-                'user_id' => $user->id,
-                'user_type' => $userType
-            ]);
-
-            \Log::info('--- Attempting Auth::login ---', [
+            \Log::channel('daily')->info('--- ALL CHECKS PASSED - LOGGING IN ---', [
                 'user_id' => $user->id,
                 'user_type' => $userType,
-                'session_id' => $request->session()->getId(),
+                'session_id_before' => $request->session()->getId()
             ]);
 
             // Log in the user
             $remember = $request->has('remember');
-            if ($userType === 'staff') {
-                Auth::guard('staff')->login($user, $remember);
-            } else {
-                Auth::guard('guest')->login($user, $remember);
+            try {
+                if ($userType === 'staff') {
+                    \Log::channel('daily')->info('Calling Auth::guard(staff)->login');
+                    Auth::guard('staff')->login($user, $remember);
+                } else {
+                    \Log::channel('daily')->info('Calling Auth::guard(guest)->login');
+                    Auth::guard('guest')->login($user, $remember);
+                }
+                \Log::channel('daily')->info('Auth::login() call successful');
+            } catch (\Throwable $authErr) {
+                \Log::channel('daily')->error('CRITICAL: Auth::login failed', [
+                    'msg' => $authErr->getMessage(),
+                    'type' => get_class($authErr)
+                ]);
+                throw $authErr;
             }
 
-            // Force session data to be written
+            \Log::channel('daily')->info('Forcing session save');
             $request->session()->put('login_timestamp', now()->toDateTimeString());
             $request->session()->save();
+            \Log::channel('daily')->info('Session saved successfully', ['new_id' => $request->session()->getId()]);
 
             // Get the session ID
             $sessionId = $request->session()->getId();
