@@ -131,15 +131,23 @@
                                                     @if($isLowStock) <i class="fa fa-warning small"></i> @endif
                                                 </span>
                                             </div>
-                                            @if($variant->items_per_package > 1 && $product->category !== 'food')
+                                            @php
+                                                $beverageCategories = ['spirits', 'wines', 'alcoholic_beverage', 'non_alcoholic_beverage', 'energy_drinks', 'water', 'juices', 'hot_beverages', 'cocktails'];
+                                                $isBeverage = in_array($product->category, $beverageCategories);
+                                            @endphp
+                                            @if(($variant->items_per_package > 1 || $isBeverage) && $product->category !== 'food')
                                             <div class="d-flex justify-content-between py-2">
                                                 <span class="text-muted font-weight-bold small text-uppercase">Packages:</span>
                                                 <span class="font-weight-bold text-dark">
-                                                    @if($packages > 0)
-                                                        {{ number_format($packages) }} {{ Str::plural(ucfirst($variant->packaging ?: 'Package'), $packages) }}
-                                                        @if($remItems > 0) + {{ number_format($remItems) }} {{ $variant->receiving_unit ?: 'pcs' }} @endif
+                                                    @if($itemsPerPackage > 0)
+                                                        @if($packages > 0)
+                                                            {{ number_format($packages) }} {{ Str::plural(ucfirst($variant->packaging ?: 'Package'), $packages) }}
+                                                            @if($remItems > 0) + {{ number_format($remItems) }} {{ $variant->receiving_unit ?: 'pcs' }} @endif
+                                                        @else
+                                                            {{ number_format($totalStock) }} {{ $variant->receiving_unit ?: 'pcs' }}
+                                                        @endif
                                                     @else
-                                                        {{ number_format($totalStock) }} {{ $variant->receiving_unit ?: 'pcs' }}
+                                                        {{ number_format($totalStock) }} pcs
                                                     @endif
                                                 </span>
                                             </div>

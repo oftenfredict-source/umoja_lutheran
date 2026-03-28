@@ -478,9 +478,13 @@
             // 1. Check main Category dropdown
             const mainCategory = document.getElementById('categorySelect').value;
             const foodCategories = ['food', 'meat_poultry', 'seafood', 'vegetables', 'dairy', 'pantry_baking', 'spices_herbs', 'oils_fats', 'snacks', 'kitchen'];
+            const beverageCategories = ['spirits', 'wines', 'alcoholic_beverage', 'non_alcoholic_beverage', 'energy_drinks', 'water', 'juices', 'hot_beverages', 'cocktails'];
             
             if (foodCategories.includes(mainCategory)) {
                 isFood = true;
+            }
+            if (beverageCategories.includes(mainCategory)) {
+                isBeverage = true;
             }
             if (mainCategory === 'cleaning_supplies' || mainCategory === 'linens') {
                 isHousekeeping = true;
@@ -491,6 +495,9 @@
             selects.forEach(select => {
                 if (foodCategories.includes(select.value)) {
                     isFood = true;
+                }
+                if (beverageCategories.includes(select.value)) {
+                    isBeverage = true;
                 }
                 if (select.value === 'cleaning_supplies' || select.value === 'linens') {
                     isHousekeeping = true;
@@ -540,7 +547,7 @@
                 }
 
                 // Volume/Weight vs Food Units
-                if (isFood) {
+                if (isFood || isBeverage) {
                     volumeWeightSection.style.display = 'none';
                     if (measurementInput) measurementInput.removeAttribute('required');
                     
@@ -548,12 +555,18 @@
                     purchasingSelect.setAttribute('required', 'required');
                     receivingSelect.setAttribute('required', 'required');
                     
-                    // Hide Ratio for Food/Snacks as per user request (tracking will be 1:1 behind scenes)
+                    // Ratio Entry
                     const ratioSection = card.querySelector('.ratio-entry-section');
-                    if (ratioSection) ratioSection.style.display = 'none';
-                    if (ratioInput) {
-                        ratioInput.value = '1';
-                        ratioInput.removeAttribute('required');
+                    if (ratioSection) {
+                        // For food, ratio is 1:1 behind scenes (per user request 48d97bab)
+                        // For beverages, ratio is visible and required (e.g. 24 bottles per crate)
+                        if (isFood) {
+                            ratioSection.style.display = 'none';
+                            if (ratioInput) ratioInput.value = '1';
+                        } else {
+                            ratioSection.style.display = 'block';
+                            if (ratioInput && ratioInput.value === '1') ratioInput.value = '24'; // Default for beverages
+                        }
                     }
                 } else {
                     // Show Volume/Weight (Normal drinks AND Housekeeping)
