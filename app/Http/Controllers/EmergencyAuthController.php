@@ -347,7 +347,7 @@ class EmergencyAuthController extends Controller
             'session_cookie_name' => config('session.cookie'),
         ]);
 
-        \Log::info('Unified login starting validation');
+        \Log::channel('daily')->info('Unified login starting validation');
         try {
             // Validate email and password (OTP disabled)
             $validationRules = [
@@ -356,7 +356,7 @@ class EmergencyAuthController extends Controller
             ];
 
             $request->validate($validationRules);
-            \Log::info('Validation passed - Direct login (OTP disabled)');
+            \Log::channel('daily')->info('Validation passed - Direct login (OTP disabled)');
         } catch (\Illuminate\Validation\ValidationException $e) {
             \Log::error('Validation failed in unified', ['errors' => $e->errors()]);
             return back()->withErrors($e->errors())->withInput($request->only('email'));
@@ -369,7 +369,7 @@ class EmergencyAuthController extends Controller
             ])->withInput($request->only('email'));
         }
 
-        \Log::info('IP check starting');
+        \Log::channel('daily')->info('IP check starting');
 
         try {
             // Check if IP address is blocked
@@ -393,14 +393,14 @@ class EmergencyAuthController extends Controller
                 ])->withInput($request->only('email'));
             }
 
-            \Log::info('IP check passed, proceeding to authenticate');
+            \Log::channel('daily')->info('IP check passed, proceeding to authenticate');
 
             // Step 1: Validate credentials and login directly (OTP DISABLED)
             $credentials = $request->only('email', 'password');
             $user = null;
             $userType = null;
 
-            \Log::info('Login attempt started - Direct login (OTP disabled)', ['email' => $credentials['email']]);
+            \Log::channel('daily')->info('Login attempt started - Direct login (OTP disabled)', ['email' => $credentials['email']]);
 
             // Try to authenticate as Staff first (super_admin, manager, reception)
             $staff = Staff::where('email', $credentials['email'])->first();
