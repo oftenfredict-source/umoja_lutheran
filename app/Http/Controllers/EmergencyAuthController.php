@@ -406,13 +406,24 @@ class EmergencyAuthController extends Controller
 
             \Log::channel('daily')->info('Login attempt started - Direct login (OTP disabled)', ['email' => $credentials['email']]);
 
-            // Try to authenticate as Staff first (super_admin, manager, reception)
-            $staff = Staff::where('email', $credentials['email'])->first();
+            \Log::channel('daily')->info('--- Querying Staff table ---');
+            try {
+                $staff = Staff::where('email', $credentials['email'])->first();
+                \Log::channel('daily')->info('Staff query finished', ['found' => (bool) $staff]);
+            } catch (\Throwable $queryErr) {
+                \Log::channel('daily')->error('CRITICAL: Staff query failed', [
+                    'msg' => $queryErr->getMessage(),
+                    'file' => $queryErr->getFile(),
+                    'line' => $queryErr->getLine()
+                ]);
+                throw $queryErr;
+            }
+
             if ($staff) {
-                \Log::info('Staff found', ['email' => $credentials['email'], 'staff_id' => $staff->id]);
+                \Log::channel('daily')->info('Staff found detail', ['email' => $credentials['email'], 'staff_id' => $staff->id]);
                 // Check password
                 if (Hash::check($credentials['password'], $staff->password)) {
-                    \Log::info('Staff password correct', ['email' => $credentials['email']]);
+                    \Log::channel('daily')->info('Staff password correct', ['email' => $credentials['email']]);
                     // Check if staff is active
                     if (!$staff->is_active) {
                         return back()->withErrors([
@@ -422,10 +433,10 @@ class EmergencyAuthController extends Controller
                     $user = $staff;
                     $userType = 'staff';
                 } else {
-                    \Log::warning('Staff password incorrect', ['email' => $credentials['email']]);
+                    \Log::channel('daily')->warning('Staff password incorrect', ['email' => $credentials['email']]);
                 }
             } else {
-                \Log::info('Staff not found', ['email' => $credentials['email']]);
+                \Log::channel('daily')->info('Staff not found', ['email' => $credentials['email']]);
             }
 
             // If both failed, track failed login attempt
@@ -628,13 +639,14 @@ class EmergencyAuthController extends Controller
                 return redirect($redirectUrl)->with('success', 'Welcome back, ' . $user->name . '!');
             }
 
-        } catch (\Exception $e) {
-            \Log::error('Login error', [
+        } catch (\Throwable $e) {
+            \Log::channel('daily')->error('Login error (Throwable)', [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
+                'trace' => substr($e->getTraceAsString(), 0, 1000),
                 'email' => $request->email ?? 'unknown',
                 'file' => $e->getFile(),
-                'line' => $e->getLine()
+                'line' => $e->getLine(),
+                'type' => get_class($e)
             ]);
 
             return back()->withErrors([
