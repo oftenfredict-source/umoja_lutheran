@@ -25,6 +25,8 @@ Route::get('/debug-session', function (Request $request) {
         'session_domain' => config('session.domain'),
         'app_url' => config('app.url'),
         'session_all' => $request->session()->all(),
+        'sessions_table_exists' => Schema::hasTable('sessions'),
+        'disk_writable' => is_writable(storage_path('framework/sessions')),
     ];
 });
 
