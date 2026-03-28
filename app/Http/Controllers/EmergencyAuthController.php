@@ -516,6 +516,7 @@ class EmergencyAuthController extends Controller
             // Get the session ID
             $sessionId = $request->session()->getId();
 
+            \Log::channel('daily')->info('Updating user session fields in DB');
             try {
                 // Generate new session token
                 $sessionToken = \Illuminate\Support\Str::random(60);
@@ -524,9 +525,11 @@ class EmergencyAuthController extends Controller
                 $user->session_token = hash('sha256', $sessionToken);
                 $user->last_session_id = $sessionId;
                 $user->save();
+                \Log::channel('daily')->info('User DB update successful');
 
                 // Update sessions table with user_id
                 if (Schema::hasTable('sessions')) {
+                    \Log::channel('daily')->info('Updating sessions table');
                     DB::table('sessions')
                         ->where('id', $sessionId)
                         ->update([
@@ -534,12 +537,22 @@ class EmergencyAuthController extends Controller
                             'ip_address' => $request->ip(),
                             'user_agent' => $request->userAgent(),
                         ]);
+                    \Log::channel('daily')->info('Sessions table update successful');
                 }
 
                 // Store session token in session
                 $request->session()->put('user_session_token', $sessionToken);
+                \Log::channel('daily')->info('Session token stored in session');
+            } catch (\Throwable $dbErr) {
+                \Log::channel('daily')->error('CRITICAL: Post-login DB update failed', [
+                    'msg' => $dbErr->getMessage(),
+                    'type' => get_class($dbErr)
+                ]);
+                // We will CONTINUE anyway to see if login persists
+            }
 
-                // Log login activity
+            // Log login activity
+            try {
                 ActivityLog::create([
                     'user_id' => $user->id,
                     'user_type' => get_class($user),
@@ -548,9 +561,8 @@ class EmergencyAuthController extends Controller
                     'ip_address' => $request->ip(),
                     'user_agent' => $request->userAgent(),
                 ]);
-            } catch (\Exception $e) {
-                \Log::warning('Post-login tracking failed: ' . $e->getMessage());
-                // Continue with redirect anyway
+            } catch (\Throwable $trackErr) {
+                \Log::warning('Post-login tracking failed: ' . $trackErr->getMessage());
             }
 
             // Get user role
@@ -596,59 +608,32 @@ class EmergencyAuthController extends Controller
                 }
             }
 
+            \Log::channel('daily')->info('--- FINAL REDIRECT ---', [
+                'user_id' => $user->id,
+                'role' => $userRole,
+                'redirect_route' => $userRole === 'super_admin' ? 'super_admin.dashboard' : ($userRole === 'manager' ? 'admin.dashboard' : 'others')
+            ]);
+
             // Redirect based on user role
             if ($userRole === 'super_admin') {
-                $redirectUrl = $intendedUrl && in_array($intendedUrl, $validDashboardRoutes)
-                    ? $intendedUrl
-                    : route('super_admin.dashboard');
+                $redirectUrl = $intendedUrl && in_array($intendedUrl, $validDashboardRoutes) ? $intendedUrl : route('super_admin.dashboard');
                 return redirect($redirectUrl)->with('success', 'Welcome back, ' . $user->name . '!');
             } elseif ($userRole === 'manager') {
-                $redirectUrl = $intendedUrl && in_array($intendedUrl, $validDashboardRoutes)
-                    ? $intendedUrl
-                    : route('admin.dashboard');
+                $redirectUrl = $intendedUrl && in_array($intendedUrl, $validDashboardRoutes) ? $intendedUrl : route('admin.dashboard');
                 return redirect($redirectUrl)->with('success', 'Welcome back, ' . $user->name . '!');
             } elseif ($userRole === 'reception') {
-                $redirectUrl = $intendedUrl && in_array($intendedUrl, $validDashboardRoutes)
-                    ? $intendedUrl
-                    : route('reception.dashboard');
-                return redirect($redirectUrl)->with('success', 'Welcome back, ' . $user->name . '!');
-            } elseif ($userRole === 'bar_keeper') {
-                $redirectUrl = $intendedUrl && in_array($intendedUrl, $validDashboardRoutes)
-                    ? $intendedUrl
-                    : route('bar-keeper.dashboard');
-                return redirect($redirectUrl)->with('success', 'Welcome back, ' . $user->name . '!');
-            } elseif ($userRole === 'housekeeper') {
-                $redirectUrl = $intendedUrl && in_array($intendedUrl, $validDashboardRoutes)
-                    ? $intendedUrl
-                    : route('housekeeper.dashboard');
-                return redirect($redirectUrl)->with('success', 'Welcome back, ' . $user->name . '!');
-            } elseif ($userRole === 'head_chef') {
-                $redirectUrl = $intendedUrl && in_array($intendedUrl, $validDashboardRoutes)
-                    ? $intendedUrl
-                    : route('chef-master.dashboard');
-                return redirect($redirectUrl)->with('success', 'Welcome back, ' . $user->name . '!');
-            } elseif ($userRole === 'waiter') {
-                $redirectUrl = $intendedUrl && in_array($intendedUrl, $validDashboardRoutes)
-                    ? $intendedUrl
-                    : route('waiter.dashboard');
+                $redirectUrl = $intendedUrl && in_array($intendedUrl, $validDashboardRoutes) ? $intendedUrl : route('reception.dashboard');
                 return redirect($redirectUrl)->with('success', 'Welcome back, ' . $user->name . '!');
             } elseif ($userRole === 'storekeeper') {
-                $redirectUrl = $intendedUrl && in_array($intendedUrl, $validDashboardRoutes)
-                    ? $intendedUrl
-                    : route('storekeeper.dashboard');
+                $redirectUrl = $intendedUrl && in_array($intendedUrl, $validDashboardRoutes) ? $intendedUrl : route('storekeeper.dashboard');
                 return redirect($redirectUrl)->with('success', 'Welcome back, ' . $user->name . '!');
             } elseif ($userRole === 'accountant') {
-                $redirectUrl = $intendedUrl && in_array($intendedUrl, $validDashboardRoutes)
-                    ? $intendedUrl
-                    : route('accountant.dashboard');
+                $redirectUrl = $intendedUrl && in_array($intendedUrl, $validDashboardRoutes) ? $intendedUrl : route('accountant.dashboard');
                 return redirect($redirectUrl)->with('success', 'Welcome back, ' . $user->name . '!');
             } else {
-                $redirectUrl = $intendedUrl && in_array($intendedUrl, $validDashboardRoutes)
-                    ? $intendedUrl
-                    : route('customer.dashboard');
+                $redirectUrl = $intendedUrl && in_array($intendedUrl, $validDashboardRoutes) ? $intendedUrl : route('customer.dashboard');
                 return redirect($redirectUrl)->with('success', 'Welcome back, ' . $user->name . '!');
             }
-
         } catch (\Throwable $e) {
             \Log::channel('daily')->error('Login error (Throwable)', [
                 'error' => $e->getMessage(),
@@ -658,9 +643,8 @@ class EmergencyAuthController extends Controller
                 'line' => $e->getLine(),
                 'type' => get_class($e)
             ]);
-
             return back()->withErrors([
-                'email' => 'An error occurred during login. Please try again. If the problem persists, contact support.',
+                'email' => 'An error occurred during login. Please try again.',
             ])->withInput($request->only('email'));
         }
     }
