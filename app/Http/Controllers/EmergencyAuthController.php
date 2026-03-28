@@ -62,8 +62,10 @@ class EmergencyAuthController extends Controller
      */
     public function showUnifiedLogin()
     {
+        // Force database driver to ensure session persistence on live server
+        config(['session.driver' => 'database']);
+
         // Always show login page, even if user is already authenticated
-        // This allows users to switch accounts or re-login
         return view('dashboard.page-login'); // no role passed → unified
     }
 
@@ -317,6 +319,9 @@ class EmergencyAuthController extends Controller
      */
     public function loginUnified(Request $request)
     {
+        // Force database driver to ensure session persistence on live server
+        config(['session.driver' => 'database']);
+
         // Log that the method was called with full CSRF debugging info
         try {
             \Log::channel('daily')->info('=== LOGIN UNIFIED METHOD CALLED ===', [
@@ -480,6 +485,13 @@ class EmergencyAuthController extends Controller
             } else {
                 Auth::guard('guest')->login($user, $request->has('remember'));
             }
+
+            // Force session save to database before redirect
+            session(['logged_at' => now()->toDateTimeString()]);
+            session()->save();
+
+            \Log::channel('daily')->info('--- REDIRECTING TO SUCCESS TEST ---', ['user_id' => $user->id]);
+            return redirect()->route('login-success-test');
 
             $request->session()->put('login_verified', true);
             \Log::channel('daily')->info('--- REDIRECTING TO Dashboard ---');
