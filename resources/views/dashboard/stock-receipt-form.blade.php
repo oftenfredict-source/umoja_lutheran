@@ -208,12 +208,33 @@
             </div>
           </div>
 
+          <div class="row mb-3">
+            <div class="col-md-12">
+              <label class="d-block">Price Type Selection <span class="text-danger">*</span></label>
+              <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="price_type" id="price_per_unit" value="unit" checked
+                  onchange="updateCalculations()">
+                <label class="form-check-label" for="price_per_unit">Price is per Individual Unit (<span
+                    class="unit-name-label">PIC</span>)</label>
+              </div>
+              <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="price_type" id="price_per_package" value="package"
+                  onchange="updateCalculations()">
+                <label class="form-check-label" for="price_per_package">Price is per Full Package (<span
+                    class="package-name-label">Package</span>)</label>
+              </div>
+              <small class="form-text text-muted">Select 'Package' if the price you enter below is for a full
+                crate/box/bag.</small>
+            </div>
+          </div>
+
           <div class="row">
             <div class="col-md-4">
               <div class="form-group">
-                <label for="buying_price_per_bottle">Buying Price per PIC (TSh) <span class="text-danger">*</span></label>
+                <label for="buying_price_per_bottle">Buying Price (TSh) <span class="text-danger">*</span></label>
                 <input class="form-control" type="number" id="buying_price_per_bottle" name="buying_price_per_bottle"
                   step="0.01" min="0" required oninput="updateCalculations()">
+                <small class="form-text text-muted" id="buying_price_hint_text">Enter price for one PIC</small>
               </div>
             </div>
             <div class="col-md-4" id="selling_price_col">
@@ -678,11 +699,24 @@
 
       if (selectedOption && selectedOption.value) {
         const itemsPerPackage = parseInt(selectedOption.dataset.itemsPerPackage) || 1;
+        const priceType = document.querySelector('input[name="price_type"]:checked').value;
+
+        // Normalize buying price to per-unit cost
+        let unitBuyingPrice = buyingPrice;
+        if (priceType === 'package' && itemsPerPackage > 0) {
+            unitBuyingPrice = buyingPrice / itemsPerPackage;
+        }
 
         // For PIC/Food system, items per package is 1 or we treat quantity as total
-        const totalBottles = isFood ? quantity : (quantity * itemsPerPackage);
+        const totalUnits = isFood ? quantity : (quantity * itemsPerPackage);
 
-        // If PIC/Food system, hide "Total Bottles" distinct display or make it identical
+        // Update hints
+        const unitName = isFood ? unitLabel : (isHousekeeping ? 'Unit' : 'PIC');
+        document.querySelector('.unit-name-label').textContent = unitName;
+        document.querySelector('.package-name-label').textContent = quantityLabel;
+        document.getElementById('buying_price_hint_text').textContent = `Enter price for one ${priceType === 'unit' ? unitName : quantityLabel}`;
+
+        // If PIC/Food system, hide "Total Bottles/Units" distinct display or make it identical
         if (isPicSystem) {
           document.getElementById('calc_total_bottles').parentElement.parentElement.style.opacity = '0.5';
           document.getElementById('calc_items_per_package').parentElement.parentElement.style.opacity = '0.5';
@@ -691,8 +725,8 @@
           document.getElementById('calc_items_per_package').parentElement.parentElement.style.opacity = '1';
         }
 
-        const profitPerBottle = sellingPrice - buyingPrice;
-        let totalBuyingCost = totalBottles * buyingPrice;
+        const profitPerUnit = sellingPrice - unitBuyingPrice;
+        let totalBuyingCost = totalUnits * unitBuyingPrice;
 
         // Calculate Discount
         let discountValue = 0;
@@ -703,20 +737,23 @@
         }
 
         const finalTotalCost = Math.max(0, totalBuyingCost - discountValue);
-        const totalProfit = (totalBottles * sellingPrice) - finalTotalCost;
+        const totalProfit = (totalUnits * sellingPrice) - finalTotalCost;
 
         // Update Display Values
         document.getElementById('calc_quantity_received').textContent = quantity;
         document.getElementById('calc_total_packages').textContent = quantity;
-        document.getElementById('calc_total_bottles').textContent = totalBottles.toLocaleString();
+        document.getElementById('calc_total_bottles').textContent = totalUnits.toLocaleString();
         document.getElementById('calc_items_per_package').textContent = isFood ? '1' : itemsPerPackage;
 
-        document.getElementById('calc_profit_per_bottle').textContent = profitPerBottle.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        document.getElementById('calc_profit_per_bottle').textContent = profitPerUnit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         document.getElementById('calc_total_buying_cost').textContent = totalBuyingCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         document.getElementById('calc_discount_amount').textContent = discountValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         document.getElementById('calc_total_profit').textContent = totalProfit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-      } else {
+        // Update the actual buying_price_per_bottle value for submission if it's package-based
+        // Actually, we should probably do this normalization on the BACKEND to be safe,
+        // or add a hidden field for the normalized unit price.
+        // For now, let's keep it in the form but add a note.
         // Reset Display
         document.getElementById('calc_total_packages').textContent = '0';
         document.getElementById('calc_quantity_received').textContent = '0';

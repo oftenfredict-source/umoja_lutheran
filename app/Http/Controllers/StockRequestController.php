@@ -161,6 +161,12 @@ class StockRequestController extends Controller
 
             $totalCost = $calcQty * $unitPrice;
 
+            // Adjust unit_cost based on the requested unit for intuitive display in the table
+            $storedUnitCost = $unitPrice;
+            if ($unit === 'packages' || $unit === 'crates' || $unit === 'carton') {
+                $storedUnitCost = $unitPrice * ($variant->items_per_package ?? 1);
+            }
+
             StockRequest::create([
                 'requested_by' => $user->id,
                 'product_variant_id' => $item['product_variant_id'],
@@ -168,7 +174,7 @@ class StockRequestController extends Controller
                 'unit' => $item['unit'],
                 'status' => $status,
                 'notes' => $notes,
-                'unit_cost' => $unitPrice,
+                'unit_cost' => $storedUnitCost,
                 'total_cost' => $totalCost,
             ]);
         }

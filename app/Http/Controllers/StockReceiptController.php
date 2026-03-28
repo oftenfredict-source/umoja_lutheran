@@ -112,8 +112,14 @@ class StockReceiptController extends Controller
             'notes' => 'nullable|string',
         ]);
 
-        // Verify product variant belongs to product
         $variant = ProductVariant::findOrFail($validated['product_variant_id']);
+
+        // Normalize buying price if submitted as package price
+        if ($request->price_type === 'package' && ($variant->items_per_package ?? 0) > 0) {
+            $validated['buying_price_per_bottle'] = $validated['buying_price_per_bottle'] / $variant->items_per_package;
+        }
+
+        // Verify product variant belongs to product
         if ($variant->product_id != $validated['product_id']) {
             return response()->json([
                 'success' => false,

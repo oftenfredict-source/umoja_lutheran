@@ -93,7 +93,32 @@
                                 </table>
                             </div>
 
-                            <div class="form-group">
+                            <div class="row mt-4">
+                                <div class="col-md-12">
+                                    <div class="card bg-light">
+                                        <div class="card-body">
+                                            <div class="row text-center">
+                                                <div class="col-md-4">
+                                                    <h6 class="text-muted">Total Items</h6>
+                                                    <h4 id="grand-total-qty">0.00</h4>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <h6 class="text-muted">Estimated Total Cost</h6>
+                                                    <h4 id="grand-total-cost">0.00</h4>
+                                                </div>
+                                                @if(!$isChef && !(isset($isHousekeeper) && $isHousekeeper))
+                                                    <div class="col-md-4">
+                                                        <h6 class="text-muted">Estimated Total Profit</h6>
+                                                        <h4 id="grand-total-profit" class="text-success">0.00</h4>
+                                                    </div>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-actions mt-4">
                                 <label class="font-weight-bold">Notes <span class="text-muted font-weight-normal">(Optional
                                         — applies to all items)</span></label>
                                 <textarea name="notes" class="form-control" rows="2"

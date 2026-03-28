@@ -94,14 +94,8 @@
                                                 @endphp
                                                 @if($reqIsBeverage)
                                                     @php
-                                                        // For beverage: calculate total_bottles and revenue/profit
-                                                        $ratio = $request->productVariant->items_per_package ?? 1;
-                                                        $reqUnit = $request->unit;
-                                                        $totalBottles = ($reqUnit === 'packages') ? $request->quantity * $ratio : $request->quantity;
-                                                        $revenue = $request->expected_revenue > 0 ? $request->expected_revenue
-                                                            : $totalBottles * ($request->productVariant->selling_price_per_pic ?? 0);
-                                                        $cost = $request->total_cost > 0 ? $request->total_cost
-                                                            : ($request->unit_cost > 0 ? $totalBottles * $request->unit_cost : 0);
+                                                        $revenue = $request->expected_revenue;
+                                                        $cost = $request->total_cost > 0 ? $request->total_cost : ($request->buying_price * $request->total_bottles);
                                                         $profit = $revenue - $cost;
                                                     @endphp
                                                     <small class="text-muted">Rev: {{ number_format($revenue, 2) }}</small><br>

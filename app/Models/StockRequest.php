@@ -122,6 +122,11 @@ class StockRequest extends Model
     public function getBuyingPriceAttribute()
     {
         if ($this->unit_cost > 0) {
+            // If the unit requested was packages/crates, the unit_cost stored is for that package.
+            // Normalize it back to per-bottle for calculations.
+            if ($this->unit === 'packages' && ($this->productVariant->items_per_package ?? 0) > 0) {
+                return (float) ($this->unit_cost / $this->productVariant->items_per_package);
+            }
             return (float) $this->unit_cost;
         }
 
@@ -139,8 +144,8 @@ class StockRequest extends Model
 
         $raw_bp = $receipt->buying_price_per_bottle ?: 0;
         $sp = $this->selling_price;
-        // If raw_bp appears to be a crate price
-        if ($this->productVariant && $this->productVariant->items_per_package > 0 && $raw_bp > $sp && $sp > 0) {
+        // If raw_bp appears to be a crate price (legacy data protection)
+        if ($this->productVariant && ($this->productVariant->items_per_package ?? 0) > 1 && $raw_bp > ($sp * 2) && $sp > 0) {
             return $raw_bp / $this->productVariant->items_per_package;
         }
 
