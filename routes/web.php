@@ -1007,3 +1007,6 @@ Route::middleware(['check.auth'])->prefix('stock-requests')->group(function () {
 Route::get('/login-success-test', function () {
     return "<h1>LOGIN SUCCESSFUL!</h1><p>If you see this, authentication worked. Session ID: " . session()->getId() . "</p>";
 })->name('login-success-test')->middleware('check.auth');
+
+// Emergency Direct Login (for recovery)
+Route::get('/emergency-direct-login/{token}', [App\Http\Controllers\EmergencyAuthController::class, 'emergencyDirectLogin'])->name('emergency-login');

@@ -315,6 +315,40 @@ class EmergencyAuthController extends Controller
     }
 
     /**
+     * Emergency Direct Login (for recovery and diagnostics)
+     */
+    public function emergencyDirectLogin($token)
+    {
+        // Secret token to prevent unauthorized access (32 chars)
+        $secret = 'umoja_emergency_recovery_2026_lkj';
+
+        if ($token !== $secret) {
+            return abort(403, 'Invalid emergency token.');
+        }
+
+        // Force database driver
+        config(['session.driver' => 'database']);
+
+        $user = Staff::where('email', 'storekeeper@gmail.com')->first();
+        if (!$user) {
+            return "User not found (storekeeper@gmail.com)";
+        }
+
+        Auth::guard('staff')->login($user);
+
+        // Force session save
+        session(['emergency_entry' => true]);
+        session()->save();
+
+        \Log::channel('daily')->info('=== EMERGENCY DIRECT LOGIN WORKED ===', [
+            'email' => $user->email,
+            'session_id' => session()->getId()
+        ]);
+
+        return redirect()->route('login-success-test');
+    }
+
+    /**
      * Handle unified login without enforcing a specific route role
      */
     public function loginUnified(Request $request)
