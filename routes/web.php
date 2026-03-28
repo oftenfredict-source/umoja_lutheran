@@ -22,11 +22,7 @@ Route::get('/debug-session', function (Request $request) {
         'user_id' => auth()->guard('staff')->id() ?? auth()->guard('guest')->id(),
         'session_driver' => config('session.driver'),
         'session_secure' => config('session.secure'),
-        'session_domain' => config('session.domain'),
-        'app_url' => config('app.url'),
         'session_all' => $request->session()->all(),
-        'sessions_table_exists' => Schema::hasTable('sessions'),
-        'disk_writable' => is_writable(storage_path('framework/sessions')),
     ];
 });
 
@@ -1006,3 +1002,8 @@ Route::middleware(['check.auth'])->prefix('stock-requests')->group(function () {
     Route::post('/{stockRequest}/distribute', [\App\Http\Controllers\StockRequestController::class, 'distribute'])->name('stock-requests.distribute');
     Route::get('/pending-counts', [\App\Http\Controllers\StockRequestController::class, 'pendingCounts'])->name('stock-requests.pending-counts');
 });
+
+// Success page test
+Route::get('/login-success-test', function () {
+    return "<h1>LOGIN SUCCESSFUL!</h1><p>If you see this, authentication worked. Session ID: " . session()->getId() . "</p>";
+})->name('login-success-test')->middleware('check.auth');

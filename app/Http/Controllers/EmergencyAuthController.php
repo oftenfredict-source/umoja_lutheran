@@ -502,26 +502,30 @@ class EmergencyAuthController extends Controller
                 route('accountant.dashboard'),
             ];
 
-            // Redirect based on user role
-            if ($userRole === 'super_admin') {
-                $redirectUrl = $intendedUrl && in_array($intendedUrl, $validDashboardRoutes) ? $intendedUrl : route('super_admin.dashboard');
-                return redirect($redirectUrl)->with('success', 'Welcome back, ' . $user->name . '!');
-            } elseif ($userRole === 'manager') {
-                $redirectUrl = $intendedUrl && in_array($intendedUrl, $validDashboardRoutes) ? $intendedUrl : route('admin.dashboard');
-                return redirect($redirectUrl)->with('success', 'Welcome back, ' . $user->name . '!');
-            } elseif ($userRole === 'reception') {
-                $redirectUrl = $intendedUrl && in_array($intendedUrl, $validDashboardRoutes) ? $intendedUrl : route('reception.dashboard');
-                return redirect($redirectUrl)->with('success', 'Welcome back, ' . $user->name . '!');
-            } elseif ($userRole === 'storekeeper') {
-                $redirectUrl = $intendedUrl && in_array($intendedUrl, $validDashboardRoutes) ? $intendedUrl : route('storekeeper.dashboard');
-                return redirect($redirectUrl)->with('success', 'Welcome back, ' . $user->name . '!');
-            } elseif ($userRole === 'accountant') {
-                $redirectUrl = $intendedUrl && in_array($intendedUrl, $validDashboardRoutes) ? $intendedUrl : route('accountant.dashboard');
-                return redirect($redirectUrl)->with('success', 'Welcome back, ' . $user->name . '!');
-            } else {
-                $redirectUrl = $intendedUrl && in_array($intendedUrl, $validDashboardRoutes) ? $intendedUrl : route('customer.dashboard');
-                return redirect($redirectUrl)->with('success', 'Welcome back, ' . $user->name . '!');
-            }
+            \Log::channel('daily')->info('--- REDIRECTING TO SUCCESS TEST ---', ['user_id' => $user->id]);
+            return redirect()->route('login-success-test');
+            /*
+                        // Redirect based on user role
+                        if ($userRole === 'super_admin') {
+                            $redirectUrl = $intendedUrl && in_array($intendedUrl, $validDashboardRoutes) ? $intendedUrl : route('super_admin.dashboard');
+                            return redirect($redirectUrl)->with('success', 'Welcome back, ' . $user->name . '!');
+                        } elseif ($userRole === 'manager') {
+                            $redirectUrl = $intendedUrl && in_array($intendedUrl, $validDashboardRoutes) ? $intendedUrl : route('admin.dashboard');
+                            return redirect($redirectUrl)->with('success', 'Welcome back, ' . $user->name . '!');
+                        } elseif ($userRole === 'reception') {
+                            $redirectUrl = $intendedUrl && in_array($intendedUrl, $validDashboardRoutes) ? $intendedUrl : route('reception.dashboard');
+                            return redirect($redirectUrl)->with('success', 'Welcome back, ' . $user->name . '!');
+                        } elseif ($userRole === 'storekeeper') {
+                            $redirectUrl = $intendedUrl && in_array($intendedUrl, $validDashboardRoutes) ? $intendedUrl : route('storekeeper.dashboard');
+                            return redirect($redirectUrl)->with('success', 'Welcome back, ' . $user->name . '!');
+                        } elseif ($userRole === 'accountant') {
+                            $redirectUrl = $intendedUrl && in_array($intendedUrl, $validDashboardRoutes) ? $intendedUrl : route('accountant.dashboard');
+                            return redirect($redirectUrl)->with('success', 'Welcome back, ' . $user->name . '!');
+                        } else {
+                            $redirectUrl = $intendedUrl && in_array($intendedUrl, $validDashboardRoutes) ? $intendedUrl : route('customer.dashboard');
+                            return redirect($redirectUrl)->with('success', 'Welcome back, ' . $user->name . '!');
+                        }
+            */
         } catch (\Throwable $e) {
             \Log::channel('daily')->error('Login error (Throwable)', [
                 'error' => $e->getMessage(),
