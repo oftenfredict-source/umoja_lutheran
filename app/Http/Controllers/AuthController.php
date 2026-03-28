@@ -466,12 +466,18 @@ class AuthController extends Controller
                 'user_type' => $userType
             ]);
 
+            \Log::info('--- Attempting Auth::login ---', [
+                'user_id' => $user->id,
+                'user_type' => $userType,
+                'session_id' => $request->session()->getId(),
+            ]);
+
             // Log in the user
             $remember = $request->has('remember');
             if ($userType === 'staff') {
-                Auth::guard('staff')->login($user, true); // force remember for test
+                Auth::guard('staff')->login($user, $remember);
             } else {
-                Auth::guard('guest')->login($user, true);
+                Auth::guard('guest')->login($user, $remember);
             }
 
             // Force session data to be written
