@@ -216,6 +216,9 @@
                     </div>
                 </div>
             </form>
+            <div class="text-center pb-5">
+                <span class="text-muted small">v2.1-beverage-ratio-fix</span>
+            </div>
         </div>
     </div>
 
@@ -479,12 +482,14 @@
             // 1. Check main Category dropdown
             const mainCategory = document.getElementById('categorySelect').value;
             const foodCategories = ['food', 'meat_poultry', 'seafood', 'vegetables', 'dairy', 'pantry_baking', 'spices_herbs', 'oils_fats', 'snacks', 'kitchen'];
-            const beverageCategories = ['spirits', 'wines', 'alcoholic_beverage', 'non_alcoholic_beverage', 'energy_drinks', 'water', 'juices', 'hot_beverages', 'cocktails'];
+            const beverageCategories = ['spirits', 'wines', 'alcoholic_beverage', 'non_alcoholic_beverage', 'energy_drinks', 'water', 'juices', 'hot_beverages', 'cocktails', 'soda', 'soft_drinks'];
             
+            console.log("Checking categories... Main:", mainCategory);
+
             if (foodCategories.includes(mainCategory)) {
                 isFood = true;
             }
-            if (beverageCategories.includes(mainCategory)) {
+            if (beverageCategories.includes(mainCategory) || mainCategory.includes('drink') || mainCategory.includes('beverage') || mainCategory.includes('soda')) {
                 isBeverage = true;
             }
             if (mainCategory === 'cleaning_supplies' || mainCategory === 'linens') {
@@ -497,7 +502,7 @@
                 if (foodCategories.includes(select.value)) {
                     isFood = true;
                 }
-                if (beverageCategories.includes(select.value)) {
+                if (beverageCategories.includes(select.value) || select.value.includes('drink') || select.value.includes('beverage') || select.value.includes('soda')) {
                     isBeverage = true;
                 }
                 if (select.value === 'cleaning_supplies' || select.value === 'linens') {
