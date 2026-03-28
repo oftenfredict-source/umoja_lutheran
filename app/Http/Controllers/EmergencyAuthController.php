@@ -318,34 +318,38 @@ class EmergencyAuthController extends Controller
     public function loginUnified(Request $request)
     {
         // Log that the method was called with full CSRF debugging info
-        \Log::channel('daily')->info('=== LOGIN UNIFIED METHOD CALLED ===', [
-            'email' => $request->email ?? 'no email',
-            'has_password' => !empty($request->password),
-            'ip' => $request->ip(),
-            'method' => $request->method(),
-            'url' => $request->fullUrl(),
-            'scheme' => $request->getScheme(),
-            'host' => $request->getHost(),
+        try {
+            \Log::channel('daily')->info('=== LOGIN UNIFIED METHOD CALLED ===', [
+                'email' => $request->email ?? 'no email',
+                'has_password' => !empty($request->password),
+                'ip' => $request->ip(),
+                'method' => $request->method(),
+                'url' => $request->fullUrl(),
+                'scheme' => $request->getScheme(),
+                'host' => $request->getHost(),
 
-            // CSRF Token Debug Info
-            'csrf_token_in_form' => $request->has('_token'),
-            'csrf_token_value' => $request->has('_token') ? substr($request->input('_token'), 0, 20) . '...' : 'NOT FOUND',
-            'csrf_token_header' => $request->header('X-CSRF-TOKEN') ? substr($request->header('X-CSRF-TOKEN'), 0, 20) . '...' : 'NOT FOUND',
-            'session_token' => $request->session()->token() ? substr($request->session()->token(), 0, 20) . '...' : 'NOT FOUND',
-            'session_id' => $request->session()->getId(),
-            'session_started' => $request->session()->isStarted(),
+                // CSRF Token Debug Info
+                'csrf_token_in_form' => $request->has('_token'),
+                'csrf_token_value' => $request->has('_token') ? substr($request->input('_token'), 0, 20) . '...' : 'NOT FOUND',
+                'csrf_token_header' => $request->header('X-CSRF-TOKEN') ? substr($request->header('X-CSRF-TOKEN'), 0, 20) . '...' : 'NOT FOUND',
+                'session_token' => $request->session()->token() ? substr($request->session()->token(), 0, 20) . '...' : 'NOT FOUND',
+                'session_id' => $request->session()->getId(),
+                'session_started' => $request->session()->isStarted(),
 
-            // Configuration
-            'app_url' => config('app.url'),
-            'app_url_scheme' => config('app.url') ? parse_url(config('app.url'), PHP_URL_SCHEME) : 'NOT SET',
-            'session_domain' => config('session.domain'),
-            'session_secure' => config('session.secure'),
-            'session_driver' => config('session.driver'),
+                // Configuration
+                'app_url' => config('app.url'),
+                'app_url_scheme' => config('app.url') ? parse_url(config('app.url'), PHP_URL_SCHEME) : 'NOT SET',
+                'session_domain' => config('session.domain'),
+                'session_secure' => config('session.secure'),
+                'session_driver' => config('session.driver'),
 
-            // Cookies
-            'session_cookie_present' => $request->hasCookie(config('session.cookie')),
-            'session_cookie_name' => config('session.cookie'),
-        ]);
+                // Cookies
+                'session_cookie_present' => $request->hasCookie(config('session.cookie')),
+                'session_cookie_name' => config('session.cookie'),
+            ]);
+        } catch (\Exception $logEx) {
+            \Log::channel('daily')->error('CRITICAL: Initial log failed: ' . $logEx->getMessage());
+        }
 
         \Log::channel('daily')->info('Unified login starting validation');
         try {
