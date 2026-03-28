@@ -351,27 +351,13 @@ class EmergencyAuthController extends Controller
             \Log::channel('daily')->error('CRITICAL: Initial log failed: ' . $logEx->getMessage());
         }
 
-        \Log::channel('daily')->info('Unified login starting validation');
-        try {
-            // Validate email and password (OTP disabled)
-            $validationRules = [
-                'email' => 'required|email',
-                'password' => 'required|string',
-            ];
-
-            $request->validate($validationRules);
-            \Log::channel('daily')->info('Validation passed - Direct login (OTP disabled)');
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            \Log::error('Validation failed in unified', ['errors' => $e->errors()]);
-            return back()->withErrors($e->errors())->withInput($request->only('email'));
-        } catch (\Exception $e) {
-            \Log::error('Login validation error', [
-                'error' => $e->getMessage()
-            ]);
-            return back()->withErrors([
-                'email' => 'An error occurred during validation.'
-            ])->withInput($request->only('email'));
+        \Log::channel('daily')->info('Unified login starting manual validation');
+        if (!$request->has('email') || !$request->has('password')) {
+            \Log::warning('Manual validation failed: missing email or password');
+            return back()->withErrors(['email' => 'Email and password are required.'])->withInput();
         }
+        $credentials = $request->only('email', 'password');
+        \Log::channel('daily')->info('Manual validation passed');
 
         \Log::channel('daily')->info('IP check starting');
 
