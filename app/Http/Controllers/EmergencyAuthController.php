@@ -513,66 +513,53 @@ class EmergencyAuthController extends Controller
                 'type' => $userType
             ]);
 
-            // Simple login without regeneration for now to avoid timeouts
+            // Login via the correct guard
             if ($userType === 'staff') {
                 Auth::guard('staff')->login($user, $request->has('remember'));
             } else {
                 Auth::guard('guest')->login($user, $request->has('remember'));
             }
 
+            // Regenerate session after login (standard Laravel security practice)
+            $request->session()->regenerate();
+
             // Force session save to database before redirect
+            $sessionId = $request->session()->getId();
             session(['logged_at' => now()->toDateTimeString()]);
             session()->save();
 
-            \Log::channel('daily')->info('--- REDIRECTING TO SUCCESS TEST ---', ['user_id' => $user->id]);
-            return redirect()->route('login-success-test');
+            \Log::channel('daily')->info('--- SESSION SAVED, REDIRECTING TO DASHBOARD ---', [
+                'user_id' => $user->id,
+                'session_id' => $sessionId,
+                'guard_check' => Auth::guard('staff')->check(),
+            ]);
 
-            $request->session()->put('login_verified', true);
-            \Log::channel('daily')->info('--- REDIRECTING TO Dashboard ---');
-
-            // Get user role
+            // Get user role for dashboard redirect
             $userRole = $user->role ?? 'guest';
 
-            // Get intended URL
-            $intendedUrl = $request->session()->pull('url.intended');
-            $validDashboardRoutes = [
-                route('admin.dashboard'),
-                route('super_admin.dashboard'),
-                route('reception.dashboard'),
-                route('bar-keeper.dashboard'),
-                route('housekeeper.dashboard'),
-                route('chef-master.dashboard'),
-                route('waiter.dashboard'),
-                route('customer.dashboard'),
-                route('storekeeper.dashboard'),
-                route('accountant.dashboard'),
-            ];
+            // Redirect based on user role
+            if ($userRole === 'super_admin') {
+                return redirect()->route('super_admin.dashboard')->with('success', 'Welcome back, ' . $user->name . '!');
+            } elseif ($userRole === 'manager') {
+                return redirect()->route('admin.dashboard')->with('success', 'Welcome back, ' . $user->name . '!');
+            } elseif ($userRole === 'reception') {
+                return redirect()->route('reception.dashboard')->with('success', 'Welcome back, ' . $user->name . '!');
+            } elseif ($userRole === 'bar_keeper') {
+                return redirect()->route('bar-keeper.dashboard')->with('success', 'Welcome back, ' . $user->name . '!');
+            } elseif ($userRole === 'housekeeper') {
+                return redirect()->route('housekeeper.dashboard')->with('success', 'Welcome back, ' . $user->name . '!');
+            } elseif ($userRole === 'head_chef') {
+                return redirect()->route('chef-master.dashboard')->with('success', 'Welcome back, ' . $user->name . '!');
+            } elseif ($userRole === 'waiter') {
+                return redirect()->route('waiter.dashboard')->with('success', 'Welcome back, ' . $user->name . '!');
+            } elseif ($userRole === 'storekeeper') {
+                return redirect()->route('storekeeper.dashboard')->with('success', 'Welcome back, ' . $user->name . '!');
+            } elseif ($userRole === 'accountant') {
+                return redirect()->route('accountant.dashboard')->with('success', 'Welcome back, ' . $user->name . '!');
+            } else {
+                return redirect()->route('customer.dashboard')->with('success', 'Welcome back, ' . $user->name . '!');
+            }
 
-            \Log::channel('daily')->info('--- REDIRECTING TO SUCCESS TEST ---', ['user_id' => $user->id]);
-            return redirect()->route('login-success-test');
-            /*
-                        // Redirect based on user role
-                        if ($userRole === 'super_admin') {
-                            $redirectUrl = $intendedUrl && in_array($intendedUrl, $validDashboardRoutes) ? $intendedUrl : route('super_admin.dashboard');
-                            return redirect($redirectUrl)->with('success', 'Welcome back, ' . $user->name . '!');
-                        } elseif ($userRole === 'manager') {
-                            $redirectUrl = $intendedUrl && in_array($intendedUrl, $validDashboardRoutes) ? $intendedUrl : route('admin.dashboard');
-                            return redirect($redirectUrl)->with('success', 'Welcome back, ' . $user->name . '!');
-                        } elseif ($userRole === 'reception') {
-                            $redirectUrl = $intendedUrl && in_array($intendedUrl, $validDashboardRoutes) ? $intendedUrl : route('reception.dashboard');
-                            return redirect($redirectUrl)->with('success', 'Welcome back, ' . $user->name . '!');
-                        } elseif ($userRole === 'storekeeper') {
-                            $redirectUrl = $intendedUrl && in_array($intendedUrl, $validDashboardRoutes) ? $intendedUrl : route('storekeeper.dashboard');
-                            return redirect($redirectUrl)->with('success', 'Welcome back, ' . $user->name . '!');
-                        } elseif ($userRole === 'accountant') {
-                            $redirectUrl = $intendedUrl && in_array($intendedUrl, $validDashboardRoutes) ? $intendedUrl : route('accountant.dashboard');
-                            return redirect($redirectUrl)->with('success', 'Welcome back, ' . $user->name . '!');
-                        } else {
-                            $redirectUrl = $intendedUrl && in_array($intendedUrl, $validDashboardRoutes) ? $intendedUrl : route('customer.dashboard');
-                            return redirect($redirectUrl)->with('success', 'Welcome back, ' . $user->name . '!');
-                        }
-            */
-        } catch (\Throwable $e) {
             \Log::channel('daily')->error('Login error (Throwable)', [
                 'error' => $e->getMessage(),
                 'trace' => substr($e->getTraceAsString(), 0, 1000),
